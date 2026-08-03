@@ -5,6 +5,8 @@ project_root <- normalizePath(
 
 source(file.path(project_root, "R", "config.R"))
 source(file.path(project_root, "R", "database.R"))
+source(file.path(project_root, "R", "catalog.R"))
+source(file.path(project_root, "R", "recommendation.R"))
 source(
   file.path(project_root, "scripts", "lib", "catalog_validation.R")
 )
