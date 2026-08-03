@@ -3,7 +3,7 @@ valid_catalog_fixture <- function() {
     ~item_id, ~item_name, ~category, ~color, ~season, ~img_url, ~active,
     "top_one", "Top One", "top", "black", "all", "https://example.com/top.png", "TRUE",
     "bottom_one", "Bottom One", "bottom", "darkblue", "cold", "https://example.com/bottom.png", "TRUE",
-    "shoes_one", "Shoes One", "shoes", "grey", "all", "https://example.com/shoes.png", "FALSE",
+    "shoes_one", "Shoes One", "shoes", "gray", "all", "https://example.com/shoes.png", "FALSE",
     "shoes_two", "Shoes Two", "shoes", "black", "warm", "https://example.com/shoes-two.png", "TRUE"
   )
 }

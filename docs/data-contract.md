@@ -9,7 +9,7 @@ The private `clothing_items` spreadsheet uses the `data` tab and exactly these s
 | `item_id` | text | Permanent, unique lowercase underscore-separated slug; never reused. |
 | `item_name` | text | Nonempty display name. |
 | `category` | text | `top`, `bottom`, or `shoes`. |
-| `color` | text | Lowercase compatibility value such as `black`, `darkblue`, `grey`, or `khaki`. |
+| `color` | text | Lowercase compatibility value such as `black`, `darkblue`, `gray`, or `khaki`. |
 | `season` | text | `all`, `warm`, or `cold`. |
 | `img_url` | text | Public direct HTTPS image URL. |
 | `active` | logical | Long-term recommendation inclusion toggle. |
