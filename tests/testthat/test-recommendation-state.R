@@ -366,3 +366,136 @@ test_that("only a worn top affects the next selection cooldown", {
   expect_equal(second$state$recommendation$effective_cooldown, 5L)
   expect_false(second_top_id == first_top_id)
 })
+
+test_that("changing weather with no active recommendation persists the mode", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+
+  changed <- change_weather_mode(
+    connection,
+    weather_mode = "cold",
+    starting_state_version = 0L
+  )
+
+  expect_true(changed$changed)
+  expect_false(changed$stale)
+  expect_equal(changed$state$settings$weather_mode, "cold")
+  expect_equal(changed$state$settings$state_version, 1)
+  expect_true(is.na(changed$state$settings$active_recommendation_id))
+})
+
+test_that("selecting the current weather mode is a no-op", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+
+  unchanged <- change_weather_mode(
+    connection,
+    weather_mode = "warm",
+    starting_state_version = 0L
+  )
+
+  expect_false(unchanged$changed)
+  expect_false(unchanged$stale)
+  expect_equal(unchanged$state$settings$weather_mode, "warm")
+  expect_equal(unchanged$state$settings$state_version, 0)
+})
+
+test_that("weather changes invalidate an active recommendation", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  seed_test_catalog(connection)
+  active <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  active_id <- active$state$recommendation$recommendation_id[[1]]
+
+  changed <- change_weather_mode(
+    connection,
+    weather_mode = "cold",
+    starting_state_version = 1L,
+    starting_active_recommendation_id = active_id
+  )
+  invalidated <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT status, resolved_at FROM clothes_app.recommendations",
+      "WHERE recommendation_id = ?"
+    ),
+    params = list(active_id)
+  )
+
+  expect_true(changed$changed)
+  expect_false(changed$stale)
+  expect_equal(changed$state$settings$weather_mode, "cold")
+  expect_true(is.na(changed$state$settings$active_recommendation_id))
+  expect_equal(changed$state$settings$state_version, 2)
+  expect_equal(invalidated$status, "season_invalidated")
+  expect_false(is.na(invalidated$resolved_at))
+  expect_length(read_recent_worn_top_ids(connection), 0L)
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.wear_history"
+    )$rows,
+    0
+  )
+})
+
+test_that("repeated stale weather changes reload current state", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  changed <- change_weather_mode(
+    connection,
+    weather_mode = "cold",
+    starting_state_version = 0L
+  )
+
+  repeated <- change_weather_mode(
+    connection,
+    weather_mode = "cold",
+    starting_state_version = 0L
+  )
+
+  expect_true(changed$changed)
+  expect_false(repeated$changed)
+  expect_true(repeated$stale)
+  expect_equal(repeated$state$settings$weather_mode, "cold")
+  expect_equal(repeated$state$settings$state_version, 1)
+})
+
+test_that("new recommendations use the changed weather mode", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  catalog <- tibble::tribble(
+    ~item_id, ~item_name, ~category, ~color, ~season, ~img_url, ~active,
+    "top_warm", "Warm Top", "top", "white", "warm", "https://example.com/top-warm.png", TRUE,
+    "top_cold", "Cold Top", "top", "blue", "cold", "https://example.com/top-cold.png", TRUE,
+    "bottom_all", "All Bottom", "bottom", "black", "all", "https://example.com/bottom.png", TRUE,
+    "shoes_all", "All Shoes", "shoes", "white", "all", "https://example.com/shoes.png", TRUE
+  )
+  publish_catalog_transaction(connection, catalog, generate_outfits(catalog))
+  warm <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  warm_id <- warm$state$recommendation$recommendation_id[[1]]
+  change_weather_mode(
+    connection,
+    weather_mode = "cold",
+    starting_state_version = 1L,
+    starting_active_recommendation_id = warm_id
+  )
+
+  cold <- choose_active_recommendation(
+    connection,
+    starting_state_version = 2L,
+    choose_index = choose_first_index
+  )
+
+  expect_equal(warm$state$recommendation$top_item_name, "Warm Top")
+  expect_equal(cold$state$recommendation$weather_mode, "cold")
+  expect_equal(cold$state$recommendation$top_item_name, "Cold Top")
+})

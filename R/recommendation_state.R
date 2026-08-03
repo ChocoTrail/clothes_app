@@ -471,3 +471,111 @@ confirm_worn_recommendation <- function(
 
   invisible(result)
 }
+
+change_weather_mode <- function(
+  connection,
+  weather_mode,
+  starting_state_version,
+  starting_active_recommendation_id = NULL,
+  config = clothes_app_config
+) {
+  validate_weather_mode(weather_mode, config)
+  starting_state_version <- validate_starting_state_version(
+    starting_state_version
+  )
+
+  result <- DBI::dbWithTransaction(connection, {
+    state <- read_recommendation_state(connection, config)
+    current_active_id <- state$settings$active_recommendation_id[[1]]
+    current_version <- state$settings$state_version[[1]]
+    current_weather_mode <- state$settings$weather_mode[[1]]
+    state_matches <- (
+      current_version == starting_state_version
+      && same_active_recommendation(
+        current_active_id,
+        starting_active_recommendation_id
+      )
+    )
+
+    if (!state_matches) {
+      list(state = state, changed = FALSE, stale = TRUE)
+    } else if (identical(current_weather_mode, weather_mode)) {
+      list(state = state, changed = FALSE, stale = FALSE)
+    } else {
+      active_guard <- if (is.na(current_active_id)) {
+        "AND active_recommendation_id IS NULL"
+      } else {
+        "AND active_recommendation_id = ?"
+      }
+      update_parameters <- if (is.na(current_active_id)) {
+        list(
+          weather_mode,
+          config$settings_id,
+          starting_state_version
+        )
+      } else {
+        list(
+          weather_mode,
+          config$settings_id,
+          current_active_id,
+          starting_state_version
+        )
+      }
+
+      updated_settings <- DBI::dbExecute(
+        connection,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET weather_mode = ?, active_recommendation_id = NULL,",
+            "state_version = state_version + 1,",
+            "updated_at = current_timestamp",
+            "WHERE settings_id = ?",
+            active_guard,
+            "AND state_version = ?"
+          ),
+          db_table_name(connection, "app_settings", config)
+        ),
+        params = update_parameters
+      )
+
+      if (updated_settings != 1L) {
+        stop(
+          "Application state changed while updating the weather mode.",
+          call. = FALSE
+        )
+      }
+
+      if (!is.na(current_active_id)) {
+        updated_recommendation <- DBI::dbExecute(
+          connection,
+          sprintf(
+            paste(
+              "UPDATE %s",
+              "SET status = 'season_invalidated',",
+              "resolved_at = current_timestamp",
+              "WHERE recommendation_id = ? AND status = 'active'"
+            ),
+            db_table_name(connection, "recommendations", config)
+          ),
+          params = list(current_active_id)
+        )
+
+        if (updated_recommendation != 1L) {
+          stop(
+            "The active recommendation changed during the weather update.",
+            call. = FALSE
+          )
+        }
+      }
+
+      list(
+        state = read_recommendation_state(connection, config),
+        changed = TRUE,
+        stale = FALSE
+      )
+    }
+  })
+
+  invisible(result)
+}
