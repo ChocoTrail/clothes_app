@@ -7,6 +7,7 @@ source(file.path(project_root, "R", "config.R"))
 source(file.path(project_root, "R", "database.R"))
 source(file.path(project_root, "R", "catalog.R"))
 source(file.path(project_root, "R", "recommendation.R"))
+source(file.path(project_root, "R", "recommendation_state.R"))
 source(
   file.path(project_root, "scripts", "lib", "catalog_validation.R")
 )
@@ -21,6 +22,10 @@ new_test_database <- function() {
     file.path(project_root, "db", "schema.sql")
   )
   connection
+}
+
+choose_first_index <- function(n, size) {
+  1L
 }
 
 seed_test_catalog <- function(connection) {

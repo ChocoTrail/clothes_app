@@ -50,10 +50,6 @@ recommendation_outfit_fixture <- function() {
   )
 }
 
-choose_first_index <- function(n, size) {
-  1L
-}
-
 test_that("five-wear cooldown excludes recently worn tops", {
   result <- select_recommended_outfit(
     recommendation_outfit_fixture(),

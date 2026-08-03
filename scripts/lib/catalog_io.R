@@ -20,12 +20,7 @@ read_catalog_sheet <- function(config = clothes_app_config) {
 }
 
 catalog_table_name <- function(connection, table, config = clothes_app_config) {
-  as.character(
-    DBI::dbQuoteIdentifier(
-      connection,
-      DBI::Id(schema = config$database_schema, table = table)
-    )
-  )
+  db_table_name(connection, table, config)
 }
 
 read_published_catalog <- function(
@@ -237,10 +232,7 @@ build_catalog_publish_plan <- function(
 }
 
 new_catalog_publication_id <- function(connection) {
-  DBI::dbGetQuery(
-    connection,
-    "SELECT CAST(uuid() AS VARCHAR) AS catalog_publication_id"
-  )$catalog_publication_id[[1]]
+  db_new_uuid(connection)
 }
 
 publication_timestamp <- function(connection) {

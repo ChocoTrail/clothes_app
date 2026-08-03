@@ -13,6 +13,55 @@ validate_weather_mode <- function(
   invisible(weather_mode)
 }
 
+read_runtime_catalog <- function(
+  connection,
+  config = clothes_app_config
+) {
+  items <- DBI::dbGetQuery(
+    connection,
+    sprintf(
+      paste(
+        "SELECT item_id, item_name, category, color, season, img_url,",
+        "active, catalog_publication_id, published_at",
+        "FROM %s",
+        "ORDER BY item_id"
+      ),
+      db_table_name(connection, "clothing_items", config)
+    )
+  ) |>
+    tibble::as_tibble()
+
+  outfits <- DBI::dbGetQuery(
+    connection,
+    sprintf(
+      paste(
+        "SELECT outfit_id, top_item_id, bottom_item_id, shoes_item_id,",
+        "is_compatible, exclusion_reason, catalog_publication_id, published_at",
+        "FROM %s",
+        "ORDER BY outfit_id"
+      ),
+      db_table_name(connection, "outfits", config)
+    )
+  ) |>
+    tibble::as_tibble()
+
+  list(items = items, outfits = outfits)
+}
+
+read_eligible_catalog_outfits <- function(
+  connection,
+  weather_mode,
+  config = clothes_app_config
+) {
+  catalog <- read_runtime_catalog(connection, config)
+  eligible_catalog_outfits(
+    catalog$items,
+    catalog$outfits,
+    weather_mode,
+    config
+  )
+}
+
 catalog_items_for_role <- function(catalog, category, role) {
   catalog |>
     dplyr::filter(.data$category == category) |>
