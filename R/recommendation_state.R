@@ -81,6 +81,38 @@ same_active_recommendation <- function(current_id, starting_id) {
   identical(as.character(current_id), as.character(starting_id))
 }
 
+validate_starting_state_version <- function(starting_state_version) {
+  if (
+    length(starting_state_version) != 1L
+    || is.na(starting_state_version)
+    || starting_state_version < 0
+    || starting_state_version != as.integer(starting_state_version)
+  ) {
+    stop("Starting state version must be one nonnegative integer.", call. = FALSE)
+  }
+
+  as.integer(starting_state_version)
+}
+
+read_cycle_shown_outfit_ids <- function(
+  connection,
+  selection_cycle_id,
+  config = clothes_app_config
+) {
+  DBI::dbGetQuery(
+    connection,
+    sprintf(
+      paste(
+        "SELECT outfit_id FROM %s",
+        "WHERE selection_cycle_id = ?",
+        "ORDER BY created_at, recommendation_id"
+      ),
+      db_table_name(connection, "recommendations", config)
+    ),
+    params = list(selection_cycle_id)
+  )$outfit_id
+}
+
 insert_active_recommendation <- function(
   connection,
   selection,
@@ -128,14 +160,9 @@ choose_active_recommendation <- function(
   choose_index = sample.int,
   config = clothes_app_config
 ) {
-  if (
-    length(starting_state_version) != 1L
-    || is.na(starting_state_version)
-    || starting_state_version < 0
-    || starting_state_version != as.integer(starting_state_version)
-  ) {
-    stop("Starting state version must be one nonnegative integer.", call. = FALSE)
-  }
+  starting_state_version <- validate_starting_state_version(
+    starting_state_version
+  )
 
   result <- DBI::dbWithTransaction(connection, {
     state <- read_recommendation_state(connection, config)
@@ -200,6 +227,135 @@ choose_active_recommendation <- function(
       if (updated_rows != 1L) {
         stop(
           "Application state changed while choosing a recommendation.",
+          call. = FALSE
+        )
+      }
+
+      list(
+        state = read_recommendation_state(connection, config),
+        created = TRUE,
+        stale = FALSE
+      )
+    }
+  })
+
+  invisible(result)
+}
+
+reroll_active_recommendation <- function(
+  connection,
+  starting_state_version,
+  starting_active_recommendation_id,
+  choose_index = sample.int,
+  config = clothes_app_config
+) {
+  starting_state_version <- validate_starting_state_version(
+    starting_state_version
+  )
+  if (
+    length(starting_active_recommendation_id) != 1L
+    || is.na(starting_active_recommendation_id)
+    || !nzchar(trimws(starting_active_recommendation_id))
+  ) {
+    stop(
+      "Starting active recommendation ID must be one non-empty value.",
+      call. = FALSE
+    )
+  }
+
+  result <- DBI::dbWithTransaction(connection, {
+    state <- read_recommendation_state(connection, config)
+    current_active_id <- state$settings$active_recommendation_id[[1]]
+    current_version <- state$settings$state_version[[1]]
+    state_matches <- (
+      current_version == starting_state_version
+      && same_active_recommendation(
+        current_active_id,
+        starting_active_recommendation_id
+      )
+    )
+
+    if (!state_matches) {
+      list(state = state, created = FALSE, stale = TRUE)
+    } else if (is.na(current_active_id)) {
+      stop("There is no active recommendation to reroll.", call. = FALSE)
+    } else {
+      current_recommendation <- state$recommendation
+      weather_mode <- state$settings$weather_mode[[1]]
+      eligible_outfits <- read_eligible_catalog_outfits(
+        connection,
+        weather_mode,
+        config
+      )
+      worn_top_ids <- read_recent_worn_top_ids(connection, config = config)
+      shown_outfit_ids <- read_cycle_shown_outfit_ids(
+        connection,
+        current_recommendation$selection_cycle_id[[1]],
+        config
+      )
+      selection <- select_recommended_outfit(
+        eligible_outfits,
+        worn_top_ids = worn_top_ids,
+        shown_outfit_ids = shown_outfit_ids,
+        effective_cooldown = current_recommendation$effective_cooldown[[1]],
+        choose_index = choose_index
+      )
+      replacement_id <- db_new_uuid(connection)
+
+      insert_active_recommendation(
+        connection,
+        selection,
+        replacement_id,
+        current_recommendation$selection_cycle_id[[1]],
+        weather_mode,
+        config
+      )
+
+      updated_settings <- DBI::dbExecute(
+        connection,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET active_recommendation_id = ?,",
+            "state_version = state_version + 1,",
+            "updated_at = current_timestamp",
+            "WHERE settings_id = ?",
+            "AND active_recommendation_id = ?",
+            "AND state_version = ?"
+          ),
+          db_table_name(connection, "app_settings", config)
+        ),
+        params = list(
+          replacement_id,
+          config$settings_id,
+          starting_active_recommendation_id,
+          starting_state_version
+        )
+      )
+
+      if (updated_settings != 1L) {
+        stop(
+          "Application state changed while rerolling the recommendation.",
+          call. = FALSE
+        )
+      }
+
+      updated_recommendation <- DBI::dbExecute(
+        connection,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET status = 'rerolled', resolved_at = current_timestamp",
+            "WHERE recommendation_id = ? AND status = 'active'"
+          ),
+          db_table_name(connection, "recommendations", config)
+        ),
+        params = list(starting_active_recommendation_id)
+      )
+
+      if (updated_recommendation != 1L) {
+        stop(
+          "The active recommendation changed while it was being rerolled.",
           call. = FALSE
         )
       }

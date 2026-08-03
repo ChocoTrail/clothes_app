@@ -109,3 +109,142 @@ test_that("choosing with no eligible outfit rolls back cleanly", {
     0
   )
 })
+
+test_that("reroll resolves the active row and saves an unseen replacement", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  catalog <- compatibility_catalog_fixture()
+  publish_catalog_transaction(connection, catalog, generate_outfits(catalog))
+  first <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  first_id <- first$state$recommendation$recommendation_id[[1]]
+  first_outfit_id <- first$state$recommendation$outfit_id[[1]]
+
+  rerolled <- reroll_active_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = first_id,
+    choose_index = choose_first_index
+  )
+  rows <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT recommendation_id, selection_cycle_id, outfit_id,",
+      "effective_cooldown, status, resolved_at",
+      "FROM clothes_app.recommendations",
+      "ORDER BY created_at, recommendation_id"
+    )
+  )
+
+  expect_true(rerolled$created)
+  expect_false(rerolled$stale)
+  expect_equal(rerolled$state$settings$state_version, 2)
+  expect_false(rerolled$state$recommendation$outfit_id == first_outfit_id)
+  expect_setequal(rows$status, c("active", "rerolled"))
+  expect_equal(length(unique(rows$selection_cycle_id)), 1L)
+  expect_equal(unique(rows$effective_cooldown), 5L)
+  expect_false(is.na(rows$resolved_at[rows$status == "rerolled"]))
+  expect_true(is.na(rows$resolved_at[rows$status == "active"]))
+})
+
+test_that("repeated stale reroll returns its replacement without duplication", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  catalog <- compatibility_catalog_fixture()
+  publish_catalog_transaction(connection, catalog, generate_outfits(catalog))
+  first <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  first_id <- first$state$recommendation$recommendation_id[[1]]
+  replacement <- reroll_active_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = first_id,
+    choose_index = choose_first_index
+  )
+
+  repeated <- reroll_active_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = first_id,
+    choose_index = choose_first_index
+  )
+
+  expect_false(repeated$created)
+  expect_true(repeated$stale)
+  expect_equal(
+    repeated$state$recommendation$recommendation_id,
+    replacement$state$recommendation$recommendation_id
+  )
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.recommendations"
+    )$rows,
+    2
+  )
+})
+
+test_that("rerolled suggestions do not affect top recency", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  catalog <- compatibility_catalog_fixture()
+  publish_catalog_transaction(connection, catalog, generate_outfits(catalog))
+  first <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  reroll_active_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id =
+      first$state$recommendation$recommendation_id[[1]],
+    choose_index = choose_first_index
+  )
+
+  expect_length(read_recent_worn_top_ids(connection), 0L)
+})
+
+test_that("failed reroll leaves the original recommendation active", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  seed_test_catalog(connection)
+  first <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  first_id <- first$state$recommendation$recommendation_id[[1]]
+  DBI::dbExecute(
+    connection,
+    "UPDATE clothes_app.clothing_items SET active = FALSE"
+  )
+
+  expect_error(
+    reroll_active_recommendation(
+      connection,
+      starting_state_version = 1L,
+      starting_active_recommendation_id = first_id,
+      choose_index = choose_first_index
+    ),
+    "No outfit is available"
+  )
+
+  state <- read_recommendation_state(connection)
+  expect_equal(state$settings$active_recommendation_id, first_id)
+  expect_equal(state$settings$state_version, 1)
+  expect_equal(state$recommendation$status, "active")
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.recommendations"
+    )$rows,
+    1
+  )
+})
