@@ -248,3 +248,121 @@ test_that("failed reroll leaves the original recommendation active", {
     1
   )
 })
+
+test_that("confirming marks the active recommendation worn and clears state", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  seed_test_catalog(connection)
+  active <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  active_id <- active$state$recommendation$recommendation_id[[1]]
+
+  confirmed <- confirm_worn_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = active_id
+  )
+  confirmed_row <- DBI::dbGetQuery(
+    connection,
+    "SELECT status, resolved_at FROM clothes_app.recommendations"
+  )
+
+  expect_true(confirmed$completed)
+  expect_false(confirmed$stale)
+  expect_true(is.na(confirmed$state$settings$active_recommendation_id))
+  expect_equal(confirmed$state$settings$state_version, 2)
+  expect_equal(nrow(confirmed$state$recommendation), 0L)
+  expect_equal(confirmed_row$status, "worn")
+  expect_false(is.na(confirmed_row$resolved_at))
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.wear_history"
+    )$rows,
+    1
+  )
+})
+
+test_that("repeated stale confirmation does not change completed state", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  seed_test_catalog(connection)
+  active <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  active_id <- active$state$recommendation$recommendation_id[[1]]
+  confirm_worn_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = active_id
+  )
+
+  repeated <- confirm_worn_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = active_id
+  )
+
+  expect_false(repeated$completed)
+  expect_true(repeated$stale)
+  expect_true(is.na(repeated$state$settings$active_recommendation_id))
+  expect_equal(repeated$state$settings$state_version, 2)
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.recommendations"
+    )$rows,
+    1
+  )
+})
+
+test_that("only a worn top affects the next selection cooldown", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  catalog <- compatibility_catalog_fixture()
+  publish_catalog_transaction(connection, catalog, generate_outfits(catalog))
+  first <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  first_id <- first$state$recommendation$recommendation_id[[1]]
+  first_top_id <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT outfits.top_item_id",
+      "FROM clothes_app.recommendations AS recommendations",
+      "JOIN clothes_app.outfits AS outfits USING (outfit_id)",
+      "WHERE recommendations.recommendation_id = ?"
+    ),
+    params = list(first_id)
+  )$top_item_id
+  confirm_worn_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = first_id
+  )
+
+  second <- choose_active_recommendation(
+    connection,
+    starting_state_version = 2L,
+    choose_index = choose_first_index
+  )
+  second_top_id <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT top_item_id FROM clothes_app.outfits",
+      "WHERE outfit_id = ?"
+    ),
+    params = list(second$state$recommendation$outfit_id[[1]])
+  )$top_item_id
+
+  expect_equal(read_recent_worn_top_ids(connection), first_top_id)
+  expect_equal(second$state$recommendation$effective_cooldown, 5L)
+  expect_false(second_top_id == first_top_id)
+})

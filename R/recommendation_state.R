@@ -94,6 +94,23 @@ validate_starting_state_version <- function(starting_state_version) {
   as.integer(starting_state_version)
 }
 
+validate_starting_active_recommendation_id <- function(
+  starting_active_recommendation_id
+) {
+  if (
+    length(starting_active_recommendation_id) != 1L
+    || is.na(starting_active_recommendation_id)
+    || !nzchar(trimws(starting_active_recommendation_id))
+  ) {
+    stop(
+      "Starting active recommendation ID must be one non-empty value.",
+      call. = FALSE
+    )
+  }
+
+  as.character(starting_active_recommendation_id)
+}
+
 read_cycle_shown_outfit_ids <- function(
   connection,
   selection_cycle_id,
@@ -252,16 +269,10 @@ reroll_active_recommendation <- function(
   starting_state_version <- validate_starting_state_version(
     starting_state_version
   )
-  if (
-    length(starting_active_recommendation_id) != 1L
-    || is.na(starting_active_recommendation_id)
-    || !nzchar(trimws(starting_active_recommendation_id))
-  ) {
-    stop(
-      "Starting active recommendation ID must be one non-empty value.",
-      call. = FALSE
+  starting_active_recommendation_id <-
+    validate_starting_active_recommendation_id(
+      starting_active_recommendation_id
     )
-  }
 
   result <- DBI::dbWithTransaction(connection, {
     state <- read_recommendation_state(connection, config)
@@ -363,6 +374,96 @@ reroll_active_recommendation <- function(
       list(
         state = read_recommendation_state(connection, config),
         created = TRUE,
+        stale = FALSE
+      )
+    }
+  })
+
+  invisible(result)
+}
+
+confirm_worn_recommendation <- function(
+  connection,
+  starting_state_version,
+  starting_active_recommendation_id,
+  config = clothes_app_config
+) {
+  starting_state_version <- validate_starting_state_version(
+    starting_state_version
+  )
+  starting_active_recommendation_id <-
+    validate_starting_active_recommendation_id(
+      starting_active_recommendation_id
+    )
+
+  result <- DBI::dbWithTransaction(connection, {
+    state <- read_recommendation_state(connection, config)
+    current_active_id <- state$settings$active_recommendation_id[[1]]
+    current_version <- state$settings$state_version[[1]]
+    state_matches <- (
+      current_version == starting_state_version
+      && same_active_recommendation(
+        current_active_id,
+        starting_active_recommendation_id
+      )
+    )
+
+    if (!state_matches) {
+      list(state = state, completed = FALSE, stale = TRUE)
+    } else if (is.na(current_active_id)) {
+      stop("There is no active recommendation to confirm.", call. = FALSE)
+    } else {
+      updated_settings <- DBI::dbExecute(
+        connection,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET active_recommendation_id = NULL,",
+            "state_version = state_version + 1,",
+            "updated_at = current_timestamp",
+            "WHERE settings_id = ?",
+            "AND active_recommendation_id = ?",
+            "AND state_version = ?"
+          ),
+          db_table_name(connection, "app_settings", config)
+        ),
+        params = list(
+          config$settings_id,
+          starting_active_recommendation_id,
+          starting_state_version
+        )
+      )
+
+      if (updated_settings != 1L) {
+        stop(
+          "Application state changed while confirming the recommendation.",
+          call. = FALSE
+        )
+      }
+
+      updated_recommendation <- DBI::dbExecute(
+        connection,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET status = 'worn', resolved_at = current_timestamp",
+            "WHERE recommendation_id = ? AND status = 'active'"
+          ),
+          db_table_name(connection, "recommendations", config)
+        ),
+        params = list(starting_active_recommendation_id)
+      )
+
+      if (updated_recommendation != 1L) {
+        stop(
+          "The active recommendation changed while it was being confirmed.",
+          call. = FALSE
+        )
+      }
+
+      list(
+        state = read_recommendation_state(connection, config),
+        completed = TRUE,
         stale = FALSE
       )
     }
