@@ -16,6 +16,26 @@ never committed. Re-running the initializer preserves existing settings,
 catalog rows, and recommendation history. It does not connect to or change
 MotherDuck.
 
+## Preview and publish the catalog locally
+
+From an interactive R console in the project root:
+
+```r
+source("scripts/publish_catalog.R")
+
+publish_catalog(target = "local")
+publish_catalog(target = "local", write = TRUE)
+```
+
+The first call validates the Google Sheet, generates outfits, and compares them
+with the local DuckDB catalog without writing. Review its counts before running
+the second call. The write call stages both catalog tables and commits them in
+one transaction. It never modifies `app_settings` or `recommendations`.
+
+MotherDuck publication remains preview-only at this stage. Calling
+`publish_catalog(target = "motherduck", write = TRUE)` stops before opening a
+database connection.
+
 ## Initialize MotherDuck
 
 1. Set `MOTHERDUCK_TOKEN` in the local environment. Never add the value to a tracked file.

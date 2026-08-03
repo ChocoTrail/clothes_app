@@ -300,3 +300,77 @@ test_that("catalog publication rolls back both tables after a write failure", {
     settings_before
   )
 })
+
+test_that("local catalog preview does not write", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+
+  capture.output(
+    preview <- publish_catalog(
+      target = "local",
+      write = FALSE,
+      raw_catalog = compatibility_catalog_fixture(),
+      connection = connection
+    )
+  )
+
+  expect_null(preview$receipt)
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.clothing_items"
+    )$rows,
+    0
+  )
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.outfits"
+    )$rows,
+    0
+  )
+})
+
+test_that("local catalog write publishes validated rows", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+
+  capture.output(
+    result <- publish_catalog(
+      target = "local",
+      write = TRUE,
+      raw_catalog = compatibility_catalog_fixture(),
+      connection = connection
+    )
+  )
+
+  expect_match(
+    result$receipt$publication_id,
+    "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+  )
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.clothing_items"
+    )$rows,
+    6
+  )
+  expect_equal(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT count(*) AS rows FROM clothes_app.outfits"
+    )$rows,
+    8
+  )
+})
+
+test_that("MotherDuck catalog writes remain disabled", {
+  expect_error(
+    publish_catalog(
+      target = "motherduck",
+      write = TRUE,
+      raw_catalog = compatibility_catalog_fixture()
+    ),
+    "MotherDuck writes are not enabled"
+  )
+})

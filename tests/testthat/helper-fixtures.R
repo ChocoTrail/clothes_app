@@ -10,6 +10,7 @@ source(
 )
 source(file.path(project_root, "scripts", "lib", "compatibility.R"))
 source(file.path(project_root, "scripts", "lib", "catalog_io.R"))
+source(file.path(project_root, "scripts", "publish_catalog.R"))
 
 new_test_database <- function() {
   connection <- db_connect_local()
