@@ -10,7 +10,7 @@ Rscript scripts/initialize_database.R --local
 Rscript tests/testthat.R
 ```
 
-Local initialization uses an isolated, in-memory DuckDB database. It validates the production schema without creating a local database file, using the shared DuckDB home, or changing MotherDuck.
+Local initialization uses an in-memory DuckDB database. It validates the production schema without creating a local database file or changing MotherDuck.
 
 ## Initialize MotherDuck
 

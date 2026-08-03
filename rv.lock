@@ -152,8 +152,8 @@ dependencies = []
 
 [[packages]]
 name = "duckdb"
-version = "1.5.5"
-source = { repository = "https://packagemanager.posit.co/cran/latest" }
+version = "1.5.4.3"
+source = { repository = "https://packagemanager.posit.co/cran/2026-07-24" }
 force_source = false
 dependencies = [
     "DBI",

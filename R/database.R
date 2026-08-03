@@ -1,10 +1,9 @@
 db_connect_local <- function(
   dbdir = ":memory:",
-  read_only = FALSE,
-  shared_home = FALSE
+  read_only = FALSE
 ) {
   DBI::dbConnect(
-    duckdb::duckdb(shared_home = shared_home),
+    duckdb::duckdb(),
     dbdir = dbdir,
     read_only = read_only
   )
@@ -35,7 +34,7 @@ db_connect_motherduck <- function(config = clothes_app_config) {
   }, add = TRUE)
 
   do.call(Sys.setenv, setNames(list(token), "motherduck_token"))
-  connection <- db_connect_local(shared_home = TRUE)
+  connection <- db_connect_local()
 
   tryCatch(
     {

@@ -9,6 +9,7 @@ r_version = "4.6"
 # Example: { alias = "PPM", url = "https://packagemanager.posit.co/cran/latest" },
 repositories = [
     {alias = "PPM", url = "https://packagemanager.posit.co/cran/latest"},
+    {alias = "PPM-DuckDB-1.5.4", url = "https://packagemanager.posit.co/cran/2026-07-24"},
 ]
 
 # A list of packages to install and any additional configuration
@@ -21,6 +22,6 @@ dependencies = [
     "bslib",
     "rsconnect",
     "DBI",
-    "duckdb",
+    {name = "duckdb", repository = "PPM-DuckDB-1.5.4"},
     "testthat",
 ]
