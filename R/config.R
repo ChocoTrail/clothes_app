@@ -3,6 +3,7 @@ clothes_app_config <- list(
   spreadsheet_tab = "data",
   motherduck_database = "choco_trail",
   database_schema = "clothes_app",
+  local_database_path = file.path("output", "clothes_app_local.duckdb"),
   display_timezone = "America/Los_Angeles",
   settings_id = "singleton",
   weather_modes = c("warm", "cold"),
@@ -33,6 +34,14 @@ validate_config <- function(config = clothes_app_config) {
 
   if (!identical(config$weather_modes, c("warm", "cold"))) {
     stop("Weather modes must be warm and cold.", call. = FALSE)
+  }
+
+  if (
+    length(config$local_database_path) != 1L
+    || is.na(config$local_database_path)
+    || !nzchar(trimws(config$local_database_path))
+  ) {
+    stop("Local database path must be one non-empty value.", call. = FALSE)
   }
 
   invisible(config)

@@ -140,10 +140,13 @@ test_that("reinitialization preserves settings and recommendation history", {
 })
 
 test_that("settings persist across a clean disconnect and reconnect", {
-  database_path <- tempfile(fileext = ".duckdb")
-  on.exit(unlink(database_path), add = TRUE)
+  database_directory <- tempfile("clothes-app-local-")
+  database_path <- file.path(database_directory, "clothes_app_local.duckdb")
+  local_config <- clothes_app_config
+  local_config$local_database_path <- database_path
+  on.exit(unlink(database_directory, recursive = TRUE), add = TRUE)
 
-  first_connection <- db_connect_local(database_path)
+  first_connection <- db_connect_local_app(local_config)
   initialize_database_schema(
     first_connection,
     file.path(project_root, "db", "schema.sql")
@@ -158,7 +161,9 @@ test_that("settings persist across a clean disconnect and reconnect", {
   )
   db_disconnect(first_connection)
 
-  second_connection <- db_connect_local(database_path)
+  expect_true(file.exists(database_path))
+
+  second_connection <- db_connect_local_app(local_config)
   on.exit(db_disconnect(second_connection), add = TRUE)
   contract <- database_contract_summary(second_connection)
 

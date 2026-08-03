@@ -14,8 +14,12 @@ if (length(arguments) > 0L && !use_local_database) {
 }
 
 connection <- if (use_local_database) {
-  message("Initializing a temporary local DuckDB database...")
-  db_connect_local()
+  message(
+    "Initializing the local DuckDB database at ",
+    clothes_app_config$local_database_path,
+    "..."
+  )
+  db_connect_local_app()
 } else {
   message("Connecting to MotherDuck database choco_trail...")
   db_connect_motherduck()

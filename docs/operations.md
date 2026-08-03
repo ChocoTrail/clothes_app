@@ -10,7 +10,11 @@ Rscript scripts/initialize_database.R --local
 Rscript tests/testthat.R
 ```
 
-Local initialization uses an in-memory DuckDB database. It validates the production schema without creating a local database file or changing MotherDuck.
+Local initialization creates or reuses `output/clothes_app_local.duckdb`. The
+`output/` directory is ignored by Git, so the local database and its data are
+never committed. Re-running the initializer preserves existing settings,
+catalog rows, and recommendation history. It does not connect to or change
+MotherDuck.
 
 ## Initialize MotherDuck
 

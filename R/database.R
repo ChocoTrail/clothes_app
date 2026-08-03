@@ -9,6 +9,30 @@ db_connect_local <- function(
   )
 }
 
+db_connect_local_app <- function(config = clothes_app_config) {
+  validate_config(config)
+  database_path <- config$local_database_path
+  database_directory <- dirname(database_path)
+
+  if (!dir.exists(database_directory)) {
+    directory_created <- dir.create(
+      database_directory,
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+
+    if (!directory_created && !dir.exists(database_directory)) {
+      stop(
+        "Could not create the local database directory: ",
+        database_directory,
+        call. = FALSE
+      )
+    }
+  }
+
+  db_connect_local(database_path)
+}
+
 db_disconnect <- function(connection) {
   if (!is.null(connection) && DBI::dbIsValid(connection)) {
     DBI::dbDisconnect(connection)
