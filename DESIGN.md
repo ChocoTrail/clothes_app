@@ -4,13 +4,13 @@
 
 ## Problem
 
-Choosing a work outfit each morning takes time and creates some decision fatigue. The app will provide one suitable combination of a top, pants, and shoes from a small personal wardrobe. Recommendations should offer variety while avoiding recently worn tops and combinations that do not match. The app will remember which recommendations were confirmed as worn so future choices remain useful.
+Choosing a work outfit each morning takes time and creates some decision fatigue. The app will provide one suitable combination of a top, bottom, and shoes from a small personal wardrobe. Recommendations should offer variety while avoiding recently worn tops and combinations that do not match. The app will remember which recommendations were confirmed as worn so future choices remain useful.
 
 ## Scope
 
 The first version is a single-user R Shiny app hosted publicly on Posit Connect Cloud. Its URL will not be promoted, and version one will not add application authentication. It will provide a mobile-friendly morning decision screen, a secondary wear-history view, a persistent warm/cold weather setting, rerolls, and confirmation of which recommendation was worn.
 
-Version one will not manage laundry or temporary availability, use live weather or calendars, score favorites, plan future outfits, enforce pants or shoe cooldowns, or provide wardrobe editing inside Shiny.
+Version one will not manage laundry or temporary availability, use live weather or calendars, score favorites, plan future outfits, enforce bottom or shoe cooldowns, or provide wardrobe editing inside Shiny.
 
 ## Brand and Visual Direction
 
@@ -57,7 +57,7 @@ Neutrals will carry most of the interface. Color will always be paired with text
 
 ## Technical Plan
 
-The Google spreadsheet [`clothing_items`](https://docs.google.com/spreadsheets/d/1bJhNJWLV1vdM4jDoC6T2lUOMbBhPdkywE5tSejeauN0/edit?gid=0#gid=0), using its `data` tab, is the editable catalog. Its spreadsheet ID is `1bJhNJWLV1vdM4jDoC6T2lUOMbBhPdkywE5tSejeauN0`. A manually run R publishing process will validate that catalog, generate every possible top-pants-shoes combination, apply compatibility rules, and publish the results to MotherDuck. The publisher will update catalog tables only; it will never replace application settings or recommendation history.
+The Google spreadsheet [`clothing_items`](https://docs.google.com/spreadsheets/d/1bJhNJWLV1vdM4jDoC6T2lUOMbBhPdkywE5tSejeauN0/edit?gid=0#gid=0), using its `data` tab, is the editable catalog. Its spreadsheet ID is `1bJhNJWLV1vdM4jDoC6T2lUOMbBhPdkywE5tSejeauN0`. A manually run R publishing process will validate that catalog, generate every possible top-bottom-shoes combination, apply compatibility rules, and publish the results to MotherDuck. The publisher will update catalog tables only; it will never replace application settings or recommendation history.
 
 The MotherDuck database is `choco_trail`, and the application schema is `clothes_app`. The Shiny app will read eligible outfits from that schema and write the selected weather mode and recommendation events back to it. Clothing images will remain at public Google Drive URLs stored in the catalog.
 
@@ -89,9 +89,9 @@ The `data` tab will contain exactly these columns:
 
 | Column | Meaning |
 |---|---|
-| `item_id` | Permanent, unique slug identifier that is never reused |
+| `item_id` | Permanent, unique lowercase underscore-separated slug identifier that is never reused |
 | `item_name` | Name displayed in the app |
-| `category` | `top`, `pants`, or `shoes` |
+| `category` | `top`, `bottom`, or `shoes` |
 | `color` | One manually selected compatibility color |
 | `season` | `all`, `warm`, or `cold` |
 | `img_url` | Public direct-image URL from Google Drive |
@@ -99,7 +99,7 @@ The `data` tab will contain exactly these columns:
 
 An inactive item remains in the catalog and history but cannot be recommended. Items should be made inactive rather than deleted so past recommendations retain valid references.
 
-Colors used by compatibility rules must have consistent stored values, including `black`, `dark_blue`, `grey`, and `khaki`. Multicolored items will still receive one manually chosen compatibility color.
+Colors used by compatibility rules must have consistent stored values, including `black`, `darkblue`, `grey`, and `khaki`. Multicolored items will still receive one manually chosen compatibility color.
 
 ## Weather Filtering
 
@@ -115,12 +115,12 @@ Changing the weather mode to the other value invalidates any active recommendati
 
 ## Compatibility
 
-The publishing process will generate the Cartesian product of all tops, pants, and shoes. It will retain every generated combination in MotherDuck and mark each one as compatible or incompatible, with an exclusion reason when applicable. Each outfit ID will be derived deterministically from the ordered top, pants, and shoes item-ID slugs; the three item-ID columns will also have a uniqueness constraint.
+The publishing process will generate the Cartesian product of all tops, bottoms, and shoes. It will retain every generated combination in MotherDuck and mark each one as compatible or incompatible, with an exclusion reason when applicable. Each outfit ID will be derived deterministically from the ordered top, bottom, and shoes item-ID slugs; the three item-ID columns will also have a uniqueness constraint.
 
 The initial rules are:
 
-- A black top cannot be worn with dark-blue pants, regardless of shoes.
-- Grey shoes cannot be worn with khaki pants, regardless of top.
+- A black top cannot be worn with a dark-blue bottom, regardless of shoes.
+- Grey shoes cannot be worn with a khaki bottom, regardless of top.
 
 These rules live in the R catalog-publishing logic rather than the Google Sheet or running Shiny app. Future rules will be added there and tested before the catalog is republished.
 
@@ -155,12 +155,12 @@ The algorithm will remain simple and explainable:
 2. Exclude tops found in the last five confirmed worn outfits.
 3. If no candidate remains, reduce the cooldown to four, then three, two, one, and zero until candidates exist.
 4. Randomly select one eligible top, giving each eligible top an equal chance.
-5. Randomly select one eligible pants-and-shoes combination for that top.
+5. Randomly select one eligible bottom-and-shoes combination for that top.
 6. During a reroll cycle, exclude exact combinations already shown while any unseen eligible combination remains available anywhere in the cycle.
 
-A reroll may show the same top with different pants or shoes. Rerolled suggestions never affect recency. If no outfit exists even at a zero cooldown, the app will show a clear error rather than failing during selection.
+A reroll may show the same top with a different bottom or shoes. Rerolled suggestions never affect recency. If no outfit exists even at a zero cooldown, the app will show a clear error rather than failing during selection.
 
-The effective cooldown is chosen when the cycle begins and remains fixed for every reroll in that cycle. For rerolls, the app first removes previously shown exact combinations whenever at least one unseen eligible combination remains. It then derives the eligible tops from that remaining set, selects a top with equal probability, and selects a pants-and-shoes combination for that top. A top with no unseen combination is therefore temporarily absent while another top still has an unseen combination. Once every currently eligible combination has been shown, the full eligible set becomes available again. If exactly one outfit is eligible, that outfit appears on every reroll.
+The effective cooldown is chosen when the cycle begins and remains fixed for every reroll in that cycle. For rerolls, the app first removes previously shown exact combinations whenever at least one unseen eligible combination remains. It then derives the eligible tops from that remaining set, selects a top with equal probability, and selects a bottom-and-shoes combination for that top. A top with no unseen combination is therefore temporarily absent while another top still has an unseen combination. Once every currently eligible combination has been shown, the full eligible set becomes available again. If exactly one outfit is eligible, that outfit appears on every reroll.
 
 Selecting the top before selecting its combination prevents tops with more compatible combinations from appearing more frequently solely because they have more rows in the outfit table.
 
@@ -174,7 +174,7 @@ The published copy of the Google Sheet, preserving the same field names. Publica
 
 ### `outfits`
 
-One automatically generated row per top-pants-shoes combination, containing a stable outfit ID, the three item IDs, `is_compatible`, an optional exclusion reason, and publication metadata. Incompatible and later-disabled combinations remain available for historical reference.
+One automatically generated row per top-bottom-shoes combination, containing a stable outfit ID, the three item IDs, `is_compatible`, an optional exclusion reason, and publication metadata. Incompatible and later-disabled combinations remain available for historical reference.
 
 ### `recommendations`
 
@@ -223,7 +223,7 @@ No Parquet or local DuckDB file is required between Google Sheets and MotherDuck
 The bslib-based interface will prioritize phone use while remaining readable on desktop. It will contain:
 
 - A warm/cold weather control.
-- A primary decision view with one card each for the top, pants, and shoes.
+- A primary decision view with one card each for the top, bottom, and shoes.
 - **Choose my outfit**, **I wore this**, and **Give me another** actions appropriate to the current state.
 - Clear loading, empty, cooldown-relaxation, and database-error messages.
 - A secondary history view showing confirmed outfits in reverse order.
@@ -374,7 +374,7 @@ Each stage should be completed and understood before moving to the next.
 - Weighted preference scoring is harder to explain and unnecessary for version one.
 - A strict cooldown can produce no candidates; progressive fallback always gives the app a path forward.
 - Calendar-bound recommendations mishandle holidays and days off.
-- Automatic weather, calendar, laundry, pants recency, and shoe recency can be reconsidered after real use.
+- Automatic weather, calendar, laundry, bottom recency, and shoe recency can be reconsidered after real use.
 - Storing images in MotherDuck, bundling them with the app, or authenticating to Drive adds unnecessary storage or deployment complexity.
 - A separate writable wear-history table would duplicate recommendation state.
 - `renv` is established, but learning `rv` is an explicit project goal; Connect Cloud will still use its required manifest.

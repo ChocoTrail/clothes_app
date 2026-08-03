@@ -24,4 +24,10 @@ dependencies = [
     "DBI",
     {name = "duckdb", repository = "PPM-DuckDB-1.5.4"},
     "testthat",
+    "googlesheets4",
+    "dplyr",
+    "tidyr",
+    "purrr",
+    "stringr",
+    "tibble",
 ]

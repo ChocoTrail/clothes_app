@@ -12,11 +12,11 @@ CREATE TABLE IF NOT EXISTS clothing_items (
   catalog_publication_id VARCHAR NOT NULL,
   published_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp,
   CONSTRAINT clothing_items_item_id_slug
-    CHECK (regexp_full_match(item_id, '[a-z0-9]+(?:-[a-z0-9]+)*')),
+    CHECK (regexp_full_match(item_id, '[a-z0-9]+(?:_[a-z0-9]+)*')),
   CONSTRAINT clothing_items_name_present
     CHECK (length(trim(item_name)) > 0),
   CONSTRAINT clothing_items_category_valid
-    CHECK (category IN ('top', 'pants', 'shoes')),
+    CHECK (category IN ('top', 'bottom', 'shoes')),
   CONSTRAINT clothing_items_color_slug
     CHECK (regexp_full_match(color, '[a-z0-9]+(?:_[a-z0-9]+)*')),
   CONSTRAINT clothing_items_season_valid
@@ -30,14 +30,14 @@ CREATE TABLE IF NOT EXISTS clothing_items (
 CREATE TABLE IF NOT EXISTS outfits (
   outfit_id VARCHAR PRIMARY KEY,
   top_item_id VARCHAR NOT NULL REFERENCES clothing_items (item_id),
-  pants_item_id VARCHAR NOT NULL REFERENCES clothing_items (item_id),
+  bottom_item_id VARCHAR NOT NULL REFERENCES clothing_items (item_id),
   shoes_item_id VARCHAR NOT NULL REFERENCES clothing_items (item_id),
   is_compatible BOOLEAN NOT NULL,
   exclusion_reason VARCHAR,
   catalog_publication_id VARCHAR NOT NULL,
   published_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp,
   CONSTRAINT outfits_items_unique
-    UNIQUE (top_item_id, pants_item_id, shoes_item_id),
+    UNIQUE (top_item_id, bottom_item_id, shoes_item_id),
   CONSTRAINT outfits_compatibility_reason_consistent
     CHECK (
       (is_compatible AND exclusion_reason IS NULL)
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS recommendations (
   resolved_at TIMESTAMP WITH TIME ZONE,
   top_item_name VARCHAR NOT NULL,
   top_img_url VARCHAR NOT NULL,
-  pants_item_name VARCHAR NOT NULL,
-  pants_img_url VARCHAR NOT NULL,
+  bottom_item_name VARCHAR NOT NULL,
+  bottom_img_url VARCHAR NOT NULL,
   shoes_item_name VARCHAR NOT NULL,
   shoes_img_url VARCHAR NOT NULL,
   CONSTRAINT recommendations_cycle_present
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
   CONSTRAINT recommendations_image_urls_https
     CHECK (
       starts_with(top_img_url, 'https://')
-      AND starts_with(pants_img_url, 'https://')
+      AND starts_with(bottom_img_url, 'https://')
       AND starts_with(shoes_img_url, 'https://')
     )
 );
@@ -129,8 +129,8 @@ SELECT
   resolved_at AS worn_at,
   top_item_name,
   top_img_url,
-  pants_item_name,
-  pants_img_url,
+  bottom_item_name,
+  bottom_img_url,
   shoes_item_name,
   shoes_img_url
 FROM recommendations
