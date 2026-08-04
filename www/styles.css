@@ -1,0 +1,251 @@
+@import url("https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500&family=Recursive:CASL,CRSV,MONO,slnt,wght@0,0.5,0,0,400;0,0.5,0,0,500&display=swap");
+
+:root {
+  --paper: #f4f3ef;
+  --ink: #22292b;
+  --surface: #e5e9e6;
+  --border: #c1c9c5;
+  --muted: #5f6969;
+  --current: #2f6f73;
+  --current-soft: #dce8e7;
+  --success: #42634a;
+  --success-soft: #e1e8de;
+  --error: #a24e3f;
+  --error-soft: #f0dcd8;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Recursive", sans-serif;
+  font-variation-settings: "CASL" 0, "MONO" 0, "slnt" 0, "CRSV" 0.5;
+}
+
+body {
+  min-width: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.bslib-page-fill {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 24px 16px 16px;
+  width: 100%;
+}
+
+.app-header {
+  align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding-bottom: 16px;
+}
+
+.app-header h1,
+.decision-panel h2,
+.outfit-card__name {
+  color: var(--ink);
+  font-weight: 500;
+  margin: 0;
+}
+
+.app-header h1 {
+  font-size: clamp(1.55rem, 5vw, 2rem);
+  line-height: 1.1;
+}
+
+.app-header__signature,
+.eyebrow,
+.outfit-card__role {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.weather-mode {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weather-mode__label {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.weather-mode__value {
+  background: var(--current-soft);
+  border: 1px solid var(--current);
+  border-radius: 999px;
+  color: var(--ink);
+  font-weight: 500;
+  padding: 5px 12px;
+}
+
+.app-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.decision-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.decision-panel--empty {
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 24px;
+}
+
+.decision-panel--empty p {
+  margin: 0;
+  max-width: 42rem;
+}
+
+.decision-panel__heading {
+  align-items: flex-end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.decision-panel__metadata {
+  color: var(--muted);
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.75rem;
+}
+
+.decision-panel__primary-action {
+  border-radius: 4px;
+  min-height: 44px;
+  padding: 9px 16px;
+}
+
+.outfit-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+.outfit-card.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: none;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.outfit-card .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.outfit-card__image-field {
+  aspect-ratio: 4 / 3;
+  background: #fff;
+  overflow: hidden;
+}
+
+.outfit-card__image {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.outfit-card__content {
+  padding: 12px;
+}
+
+.outfit-card__name {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.app-notice {
+  border: 1px solid var(--current);
+  border-radius: 3px;
+  padding: 10px 12px;
+}
+
+.app-notice--info {
+  background: var(--current-soft);
+}
+
+.app-notice--success {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+
+.app-notice--error {
+  background: var(--error-soft);
+  border-color: var(--error);
+}
+
+.app-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-top: 12px;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--current);
+  --bs-btn-border-color: var(--current);
+  --bs-btn-hover-bg: #285f62;
+  --bs-btn-hover-border-color: #285f62;
+  --bs-btn-active-bg: #234f52;
+  --bs-btn-active-border-color: #234f52;
+}
+
+:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 3px;
+}
+
+@media (min-width: 760px) {
+  .app-shell {
+    padding: 32px 24px 20px;
+  }
+
+  .outfit-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

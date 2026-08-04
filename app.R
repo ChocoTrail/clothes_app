@@ -1,18 +1,13 @@
 library(shiny)
 library(bslib)
 
-ui <- page_fillable(
-  theme = bs_theme(version = 5),
-  title = "Clothes App",
-  card(
-    card_header("Clothes App"),
-    p("The project environment and deployment path are ready for verification."),
-    p("Outfit recommendations will be added in the next implementation stages.")
-  )
-)
+source(file.path("R", "config.R"))
+source(file.path("R", "database.R"))
+source(file.path("R", "catalog.R"))
+source(file.path("R", "recommendation.R"))
+source(file.path("R", "recommendation_state.R"))
+source(file.path("R", "ui_components.R"))
+source(file.path("R", "app_ui.R"))
+source(file.path("R", "app_server.R"))
 
-server <- function(input, output, session) {
-  invisible(NULL)
-}
-
-shinyApp(ui, server)
+shinyApp(ui = app_ui(), server = app_server)

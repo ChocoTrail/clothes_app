@@ -70,3 +70,31 @@ test_that("every category must have an active item", {
   expect_equal(nrow(category_issue), 1L)
   expect_match(category_issue$message, "No active shoes")
 })
+
+test_that("Google image URLs must use the browser-safe form", {
+  invalid_urls <- c(
+    "https://drive.google.com/file/d/file-id/view?usp=sharing",
+    "https://drive.google.com/drive/folders/folder-id",
+    "https://drive.google.com/uc?export=view&id=file-id"
+  )
+
+  for (invalid_url in invalid_urls) {
+    catalog <- valid_catalog_fixture()
+    catalog$img_url[[1]] <- invalid_url
+    validation <- validate_catalog(catalog)
+    image_issue <- validation$issues |>
+      dplyr::filter(.data$sheet_row == 2L, .data$column == "img_url")
+
+    expect_true(catalog_has_errors(validation))
+    expect_equal(nrow(image_issue), 1L)
+    expect_match(image_issue$message, "browser-safe Google image URL")
+  }
+
+  catalog <- valid_catalog_fixture()
+  catalog$img_url[[1]] <- paste0(
+    "https://lh3.googleusercontent.com/d/",
+    "13N-TfTOzv-tWJj1Hjmq6zRlNywKP714t=w1200"
+  )
+
+  expect_false(catalog_has_errors(validate_catalog(catalog)))
+})

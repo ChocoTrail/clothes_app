@@ -11,7 +11,7 @@ The private `clothing_items` spreadsheet uses the `data` tab and exactly these s
 | `category` | text | `top`, `bottom`, or `shoes`. |
 | `color` | text | Lowercase compatibility value such as `black`, `darkblue`, `gray`, or `khaki`. |
 | `season` | text | `all`, `warm`, or `cold`. |
-| `img_url` | text | Public direct HTTPS image URL. |
+| `img_url` | text | Public browser-safe Google image URL in the form `https://lh3.googleusercontent.com/d/FILE_ID=w1200`. |
 | `active` | logical | Long-term recommendation inclusion toggle. |
 
 ## MotherDuck objects

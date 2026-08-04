@@ -59,7 +59,7 @@ Neutrals will carry most of the interface. Color will always be paired with text
 
 The Google spreadsheet [`clothing_items`](https://docs.google.com/spreadsheets/d/1bJhNJWLV1vdM4jDoC6T2lUOMbBhPdkywE5tSejeauN0/edit?gid=0#gid=0), using its `data` tab, is the editable catalog. Its spreadsheet ID is `1bJhNJWLV1vdM4jDoC6T2lUOMbBhPdkywE5tSejeauN0`. A manually run R publishing process will validate that catalog, generate every possible top-bottom-shoes combination, apply compatibility rules, and publish the results to MotherDuck. The publisher will update catalog tables only; it will never replace application settings or recommendation history.
 
-The MotherDuck database is `choco_trail`, and the application schema is `clothes_app`. The Shiny app will read eligible outfits from that schema and write the selected weather mode and recommendation events back to it. Clothing images will remain at public Google Drive URLs stored in the catalog.
+The MotherDuck database is `choco_trail`, and the application schema is `clothes_app`. The Shiny app will read eligible outfits from that schema and write the selected weather mode and recommendation events back to it. Clothing images will remain at public, Drive-backed Google image URLs stored in the catalog. These URLs will use the browser-safe `https://lh3.googleusercontent.com/d/FILE_ID=w1200` form because Drive share pages and download redirects cannot be embedded reliably.
 
 `MOTHERDUCK_TOKEN` is the only initially required secret environment variable. It will be supplied through local and Connect Cloud secret environment configuration, never committed to the repository, sent to the browser, or included in application messages or logs. The spreadsheet ID, tab name, MotherDuck database and schema names, and display time zone are non-secret constants owned by `R/config.R` rather than environment variables.
 
@@ -94,7 +94,7 @@ The `data` tab will contain exactly these columns:
 | `category` | `top`, `bottom`, or `shoes` |
 | `color` | One manually selected compatibility color |
 | `season` | `all`, `warm`, or `cold` |
-| `img_url` | Public direct-image URL from Google Drive |
+| `img_url` | Public browser-safe Google image URL in the form `https://lh3.googleusercontent.com/d/FILE_ID=w1200` |
 | `active` | Long-term inclusion toggle |
 
 An inactive item remains in the catalog and history but cannot be recommended. Items should be made inactive rather than deleted so past recommendations retain valid references.

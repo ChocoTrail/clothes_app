@@ -99,6 +99,21 @@ prepare_catalog_text <- function(catalog) {
 catalog_value_issues <- function(catalog) {
   blank <- function(value) is.na(value) | value == ""
   active_text <- stringr::str_to_upper(catalog$active)
+  google_image_host <- stringr::str_detect(
+    catalog$img_url,
+    paste0(
+      "^https://(?:drive\\.google\\.com|",
+      "drive\\.usercontent\\.google\\.com|",
+      "lh3\\.googleusercontent\\.com)"
+    )
+  )
+  browser_safe_google_image <- stringr::str_detect(
+    catalog$img_url,
+    paste0(
+      "^https://lh3\\.googleusercontent\\.com/d/",
+      "[A-Za-z0-9_-]+=w1200$"
+    )
+  )
 
   duplicated_id <- (
     duplicated(catalog$item_id)
@@ -167,6 +182,17 @@ catalog_value_issues <- function(catalog) {
       ),
       "img_url",
       "Image URL must begin with https://."
+    ),
+    catalog_row_issues(
+      catalog,
+      !blank(catalog$img_url)
+        & google_image_host
+        & !browser_safe_google_image,
+      "img_url",
+      paste(
+        "Use a browser-safe Google image URL in the form",
+        "https://lh3.googleusercontent.com/d/FILE_ID=w1200."
+      )
     ),
     catalog_row_issues(
       catalog,
