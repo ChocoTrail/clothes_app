@@ -1,5 +1,13 @@
-library(shiny)
-library(bslib)
+options(
+  shiny.devmode.verbose = FALSE,
+  shiny.autoreload.legacy_warning = FALSE,
+  bslib.color_contrast_warnings = FALSE
+)
+
+suppressPackageStartupMessages({
+  library(shiny)
+  library(bslib)
+})
 
 source(file.path("R", "config.R"))
 source(file.path("R", "database.R"))

@@ -63,13 +63,6 @@ publish_catalog <- function(
     stop("write must be one TRUE or FALSE value.", call. = FALSE)
   }
 
-  if (write && target == "motherduck") {
-    stop(
-      "MotherDuck writes are not enabled yet. Preview it or target local.",
-      call. = FALSE
-    )
-  }
-
   if (is.null(raw_catalog)) {
     message("Reading the Google Sheet in read-only mode...")
     raw_catalog <- read_catalog_sheet()
@@ -140,7 +133,8 @@ publish_catalog <- function(
       outfits
     )
     message(
-      "Local catalog publication committed with ID ",
+      catalog_target_label(target),
+      " catalog publication committed with ID ",
       receipt$publication_id,
       "."
     )

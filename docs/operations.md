@@ -37,9 +37,16 @@ with the local DuckDB catalog without writing. Review its counts before running
 the second call. The write call stages both catalog tables and commits them in
 one transaction. It never modifies `app_settings` or `recommendations`.
 
-MotherDuck publication remains preview-only at this stage. Calling
-`publish_catalog(target = "motherduck", write = TRUE)` stops before opening a
-database connection.
+MotherDuck uses the same preview-first workflow:
+
+```r
+publish_catalog(target = "motherduck")
+publish_catalog(target = "motherduck", write = TRUE)
+```
+
+Review the dry-run counts before the write call. MotherDuck publication uses
+the same staging tables, existing-catalog checks, and transaction as local
+publication; it does not modify `app_settings` or `recommendations`.
 
 ## Initialize MotherDuck
 
