@@ -48,6 +48,23 @@ Review the dry-run counts before the write call. MotherDuck publication uses
 the same staging tables, existing-catalog checks, and transaction as local
 publication; it does not modify `app_settings` or `recommendations`.
 
+## Generate the deployment manifest
+
+From the project root, run:
+
+```sh
+Rscript scripts/write_manifest.R
+```
+
+The generator resolves dependencies from the active project library and writes
+`manifest.json` from an explicit runtime file list. The deployment bundle
+contains `app.R`, the sourced files under `R/`, and the required files under
+`www/`. It excludes local databases, credentials, tests, catalog-publishing
+tools, source images, and environment-management files.
+
+Regenerate and commit `manifest.json` whenever a runtime file or runtime package
+dependency changes.
+
 ## Initialize MotherDuck
 
 1. Set `MOTHERDUCK_TOKEN` in the local environment. Never add the value to a tracked file.
