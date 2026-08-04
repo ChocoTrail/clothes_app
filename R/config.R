@@ -6,6 +6,7 @@ clothes_app_config <- list(
   local_database_path = file.path("output", "clothes_app_local.duckdb"),
   display_timezone = "America/Los_Angeles",
   settings_id = "singleton",
+  database_targets = c("local", "motherduck"),
   weather_modes = c("warm", "cold"),
   recommendation_statuses = c(
     "active",
@@ -36,6 +37,10 @@ validate_config <- function(config = clothes_app_config) {
     stop("Weather modes must be warm and cold.", call. = FALSE)
   }
 
+  if (!identical(config$database_targets, c("local", "motherduck"))) {
+    stop("Database targets must be local and motherduck.", call. = FALSE)
+  }
+
   if (
     length(config$local_database_path) != 1L
     || is.na(config$local_database_path)
@@ -45,6 +50,35 @@ validate_config <- function(config = clothes_app_config) {
   }
 
   invisible(config)
+}
+
+validate_database_target <- function(
+  target,
+  config = clothes_app_config
+) {
+  validate_config(config)
+
+  if (
+    length(target) != 1L
+    || is.na(target)
+    || !target %in% config$database_targets
+  ) {
+    stop(
+      "CLOTHES_APP_DATABASE_TARGET must be local or motherduck.",
+      call. = FALSE
+    )
+  }
+
+  target
+}
+
+app_database_target <- function(config = clothes_app_config) {
+  target <- Sys.getenv(
+    "CLOTHES_APP_DATABASE_TARGET",
+    unset = "local"
+  )
+
+  validate_database_target(target, config)
 }
 
 motherduck_token <- function() {

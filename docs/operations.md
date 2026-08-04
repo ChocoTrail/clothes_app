@@ -16,6 +16,11 @@ never committed. Re-running the initializer preserves existing settings,
 catalog rows, and recommendation history. It does not connect to or change
 MotherDuck.
 
+The running app also defaults to the local database. The non-secret
+`CLOTHES_APP_DATABASE_TARGET` setting accepts `local` or `motherduck`; leaving
+it unset is equivalent to `local`. A later deployment will set it to
+`motherduck` alongside the required MotherDuck token.
+
 ## Preview and publish the catalog locally
 
 From an interactive R console in the project root:
@@ -57,3 +62,7 @@ The initializer is repeatable. Existing settings and recommendation history are 
 ## Secret handling
 
 `MOTHERDUCK_TOKEN` is the only required secret. The connection temporarily exposes it under the extension's expected lowercase environment name only while attaching MotherDuck, then restores the prior process environment. The token is never written to SQL, application messages, logs, or committed files.
+
+`CLOTHES_APP_DATABASE_TARGET` is configuration, not a secret. Use `local` for
+development and `motherduck` only in an environment that has a valid
+`MOTHERDUCK_TOKEN`.

@@ -20,6 +20,40 @@ test_that("schema creates the designed objects and warm singleton", {
   expect_equal(contract$settings$state_version, 0)
 })
 
+test_that("application database target defaults locally and validates overrides", {
+  variable_name <- "CLOTHES_APP_DATABASE_TARGET"
+  prior_target <- Sys.getenv(variable_name, unset = NA_character_)
+  on.exit({
+    if (is.na(prior_target)) {
+      Sys.unsetenv(variable_name)
+    } else {
+      do.call(Sys.setenv, setNames(list(prior_target), variable_name))
+    }
+  }, add = TRUE)
+
+  Sys.unsetenv(variable_name)
+  expect_equal(app_database_target(), "local")
+
+  do.call(Sys.setenv, setNames(list("motherduck"), variable_name))
+  expect_equal(app_database_target(), "motherduck")
+
+  do.call(Sys.setenv, setNames(list("remote"), variable_name))
+  expect_error(app_database_target(), "must be local or motherduck")
+})
+
+test_that("application connector opens the configured local database", {
+  database_path <- tempfile(fileext = ".duckdb")
+  on.exit(unlink(database_path), add = TRUE)
+  config <- clothes_app_config
+  config$local_database_path <- database_path
+
+  connection <- db_connect_app(config, target = "local")
+  on.exit(db_disconnect(connection), add = TRUE)
+
+  expect_true(DBI::dbIsValid(connection))
+  expect_true(file.exists(database_path))
+})
+
 test_that("schema constraints reject invalid controlled values", {
   connection <- new_test_database()
   on.exit(db_disconnect(connection), add = TRUE)

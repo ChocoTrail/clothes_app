@@ -2,7 +2,7 @@ app_server <- function(
   input,
   output,
   session,
-  connection_factory = db_connect_local_app
+  connection_factory = db_connect_app
 ) {
   connection <- connection_factory()
   session$onSessionEnded(function() db_disconnect(connection))

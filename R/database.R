@@ -110,6 +110,19 @@ db_connect_motherduck <- function(config = clothes_app_config) {
   )
 }
 
+db_connect_app <- function(
+  config = clothes_app_config,
+  target = app_database_target(config)
+) {
+  target <- validate_database_target(target, config)
+
+  switch(
+    target,
+    local = db_connect_local_app(config),
+    motherduck = db_connect_motherduck(config)
+  )
+}
+
 read_schema_sql <- function(schema_path = file.path("db", "schema.sql")) {
   if (!file.exists(schema_path)) {
     stop("Schema file does not exist: ", schema_path, call. = FALSE)
