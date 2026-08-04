@@ -21,7 +21,8 @@ runtime_files <- c(
     "brand",
     c(
       "choco-trail-lockup-horizontal-ink-outlined.svg",
-      "favicon.svg"
+      "favicon.svg",
+      "apple-touch-icon.png"
     )
   )
 )

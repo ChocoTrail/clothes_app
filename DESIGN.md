@@ -68,6 +68,9 @@ Neutrals will carry most of the interface. Color will always be paired with text
 - Interactive targets should be about 44 by 44 CSS pixels and never smaller than 24 by 24 pixels without a clear reason.
 - Keyboard focus uses Current Turquoise with a separating Paper gap. Body links are Current Turquoise and underlined.
 - The approved Ink horizontal lockup may appear quietly in the footer at no less than 180 CSS pixels wide. The approved favicon asset will be used at smaller sizes; the lockup will not be redrawn.
+- A 180-by-180 PNG generated directly from the approved square favicon will be
+  supplied as the Apple touch icon so an iPhone Home Screen installation uses
+  the comet mark rather than a page screenshot.
 - The app will use the existing clothing photography directly and will not add decorative stock imagery, cultural motifs, or AI-styled ornament.
 
 ## Technical Plan
@@ -318,7 +321,8 @@ clothes_app/
 │   ├── styles.css
 │   └── brand/
 │       ├── choco-trail-lockup-horizontal-ink-outlined.svg
-│       └── favicon.svg
+│       ├── favicon.svg
+│       └── apple-touch-icon.png
 ├── rv/
 │   ├── .gitignore
 │   └── scripts/
@@ -345,7 +349,11 @@ clothes_app/
 - `tests/testthat/` will cover catalog validation, compatibility, schema expectations, publication safety, recommendation behavior, and state transitions using local fixtures rather than production data.
 - `docs/data-contract.md` will document Google Sheet and MotherDuck fields; `docs/operations.md` will document setup, publication, deployment, and recovery.
 - `www/styles.css` will implement the Choco Trail typography, color tokens, compact spacing, measured corner radii, responsive behavior, visible focus, and accessibility details not supplied by bslib.
-- `www/brand/choco-trail-lockup-horizontal-ink-outlined.svg` and `www/brand/favicon.svg` will be copied from the approved assets in the personal-brand repository. They will not be edited or reconstructed.
+- `www/brand/choco-trail-lockup-horizontal-ink-outlined.svg` and
+  `www/brand/favicon.svg` will be copied from the approved assets in the
+  personal-brand repository. They will not be edited or reconstructed.
+  `www/brand/apple-touch-icon.png` will be a 180-by-180 raster export of that
+  approved favicon, without visual modification.
 
 The existing final PNGs under `img/realistic-white/` may remain as canonical source assets but will not be deployed. Raw images, intermediate image files, generated output, local package libraries, credentials, and `.DS_Store` files will be ignored.
 

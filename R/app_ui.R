@@ -18,6 +18,11 @@ app_ui <- function() {
         type = "image/svg+xml",
         href = "brand/favicon.svg"
       ),
+      shiny::tags$link(
+        rel = "apple-touch-icon",
+        sizes = "180x180",
+        href = "brand/apple-touch-icon.png"
+      ),
       shiny::tags$link(rel = "stylesheet", href = "styles.css")
     ),
     shiny::div(

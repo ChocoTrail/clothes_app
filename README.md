@@ -173,6 +173,20 @@ git commit -m "Describe the change"
 git push
 ```
 
+## Add the app to an iPhone Home Screen
+
+After the latest Connect Cloud deployment is active:
+
+1. Open the standalone app URL in Safari on the iPhone.
+2. Tap the Share button.
+3. Select **Add to Home Screen**.
+4. Turn on **Open as Web App** if that option is shown.
+5. Confirm the name and tap **Add**.
+
+Safari should use the Choco Trail comet mark supplied by
+`www/brand/apple-touch-icon.png`. If an older Home Screen shortcut already
+exists, remove it and add the site again so Safari requests the new icon.
+
 ## Documentation
 
 - [`DESIGN.md`](DESIGN.md): product behavior, architecture, data model, and

@@ -1242,7 +1242,7 @@
       "checksum": "6856ee839030d7ff645e5a875044d3f6"
     },
     "R/app_ui.R": {
-      "checksum": "25557992ee154922351c8cc235b8a212"
+      "checksum": "1bd6b1e963b3e68fbd91f7bbefd03813"
     },
     "R/catalog.R": {
       "checksum": "9c8098d2eb112e7089dc3e4661801c1e"
@@ -1261,6 +1261,9 @@
     },
     "R/ui_components.R": {
       "checksum": "a65f97de14bd29c7dbf1fa0180d65154"
+    },
+    "www/brand/apple-touch-icon.png": {
+      "checksum": "d5a86b4058ad3db16894f339e9d9e7f6"
     },
     "www/brand/choco-trail-lockup-horizontal-ink-outlined.svg": {
       "checksum": "41ae99c2322ab87423e47e3eeaafc3de"

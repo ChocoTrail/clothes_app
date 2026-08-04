@@ -97,8 +97,9 @@ For an ordinary code change:
 The deployment should then be checked in its standalone public view. Confirm
 the ready-state card, weather persistence, recommendation persistence after a
 refresh, rerolling, worn confirmation, history accordions, images, and the
-mobile layout. Avoid creating unnecessary production history while performing
-routine visual-only checks.
+mobile layout. Adding the standalone URL to an iPhone Home Screen should show
+the comet touch icon. Avoid creating unnecessary production history while
+performing routine visual-only checks.
 
 ## Initialize MotherDuck
 
