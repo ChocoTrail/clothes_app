@@ -12,6 +12,21 @@ The first version is a single-user R Shiny app hosted publicly on Posit Connect 
 
 Version one will not manage laundry or temporary availability, use live weather or calendars, score favorites, plan future outfits, enforce bottom or shoe cooldowns, or provide wardrobe editing inside Shiny.
 
+## Implementation Status
+
+Version one is implemented and deployed on Posit Connect Cloud from the
+`ChocoTrail/clothes_app` GitHub repository. Connect Cloud follows the `main`
+branch and automatically republishes successful pushes. The deployed app uses
+MotherDuck through server-side `MOTHERDUCK_TOKEN` and
+`CLOTHES_APP_DATABASE_TARGET=motherduck` variables; local development continues
+to default to the ignored DuckDB database.
+
+The final deployment has been exercised in desktop and iPhone layouts. Manual
+acceptance checks covered the ready-first screen, public access, image loading,
+weather persistence, selection persistence across refreshes, rerolling,
+confirmed wear history, collapsed history cards, and the Choco Trail footer
+lockup.
+
 ## Brand and Visual Direction
 
 The app will follow the Choco Trail system documented in `../personal_brand/brand-guide/choco-trail-brand-essentials.md` and `../personal_brand/output/pdf/choco-trail-brand-guide.pdf`.
@@ -228,6 +243,8 @@ The bslib-based interface will prioritize phone use while remaining readable on 
 - **Choose my outfit**, **I wore this**, and **Give me another** actions appropriate to the current state.
 - Clear loading, empty, cooldown-relaxation, and database-error messages.
 - A secondary history view showing confirmed outfits in reverse order.
+- Collapsible date-based history cards that reveal the three saved item images
+  and titles when expanded.
 
 Cards will stack vertically on narrow screens and sit side by side on wider screens. Each card will use a Surface or quiet light field, a restrained Border edge, a 3-pixel radius, and no ordinary shadow. Images will use consistent dimensions and accessible alternative text.
 
