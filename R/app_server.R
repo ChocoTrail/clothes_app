@@ -37,7 +37,10 @@ app_server <- function(
         busy = busy()
       )
     } else {
-      active_decision_panel(state$recommendation)
+      active_decision_panel(
+        state$recommendation,
+        busy = busy()
+      )
     }
   })
 
@@ -73,6 +76,42 @@ app_server <- function(
         "The current recommendation was reloaded."
       } else {
         "Your outfit is ready."
+      }
+    ))
+  }, ignoreInit = TRUE)
+
+  shiny::observeEvent(input$reroll_outfit, {
+    state_at_click <- app_state()
+    busy(TRUE)
+    notice(NULL)
+    on.exit(busy(FALSE), add = TRUE)
+
+    result <- tryCatch(
+      reroll_active_recommendation(
+        connection,
+        starting_state_version =
+          state_at_click$settings$state_version[[1]],
+        starting_active_recommendation_id =
+          state_at_click$settings$active_recommendation_id[[1]]
+      ),
+      error = function(error) error
+    )
+
+    if (inherits(result, "error")) {
+      notice(list(
+        type = "error",
+        message = "Another outfit could not be saved; try again."
+      ))
+      return()
+    }
+
+    app_state(result$state)
+    notice(list(
+      type = "info",
+      message = if (result$stale) {
+        "The current recommendation was reloaded."
+      } else {
+        "Here’s another option."
       }
     ))
   }, ignoreInit = TRUE)

@@ -47,7 +47,7 @@ empty_decision_panel <- function(weather_mode, busy = FALSE) {
   )
 }
 
-active_decision_panel <- function(recommendation) {
+active_decision_panel <- function(recommendation, busy = FALSE) {
   cooldown <- recommendation$effective_cooldown[[1]]
 
   shiny::tags$section(
@@ -79,6 +79,15 @@ active_decision_panel <- function(recommendation) {
         "Shoes",
         recommendation$shoes_item_name[[1]],
         recommendation$shoes_img_url[[1]]
+      )
+    ),
+    shiny::div(
+      class = "decision-panel__actions",
+      shiny::actionButton(
+        "reroll_outfit",
+        "Give me another",
+        class = "btn-outline-secondary decision-panel__secondary-action",
+        disabled = if (busy) "disabled" else NULL
       )
     )
   )

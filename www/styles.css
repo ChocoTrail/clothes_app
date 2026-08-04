@@ -147,6 +147,27 @@ textarea {
   padding: 9px 16px;
 }
 
+.decision-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.decision-panel__secondary-action {
+  border-color: var(--muted);
+  border-radius: 4px;
+  color: var(--ink);
+  min-height: 44px;
+  padding: 9px 16px;
+}
+
+.decision-panel__secondary-action:hover,
+.decision-panel__secondary-action:focus-visible {
+  background: var(--surface);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
 .outfit-grid {
   display: grid;
   gap: 12px;
