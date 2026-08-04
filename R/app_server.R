@@ -10,12 +10,14 @@ app_server <- function(
   app_state <- shiny::reactiveVal(
     read_recommendation_state(connection)
   )
+  recommendation_visible <- shiny::reactiveVal(FALSE)
   busy <- shiny::reactiveVal(FALSE)
   notice <- shiny::reactiveVal(NULL)
 
-  output$weather_mode <- shiny::renderUI({
-    weather_mode_indicator(
-      app_state()$settings$weather_mode[[1]]
+  output$weather_control <- shiny::renderUI({
+    weather_mode_control(
+      app_state()$settings$weather_mode[[1]],
+      busy = busy()
     )
   })
 
@@ -31,7 +33,10 @@ app_server <- function(
   output$decision_view <- shiny::renderUI({
     state <- app_state()
 
-    if (nrow(state$recommendation) == 0L) {
+    if (
+      !recommendation_visible()
+      || nrow(state$recommendation) == 0L
+    ) {
       empty_decision_panel(
         state$settings$weather_mode[[1]],
         busy = busy()
@@ -62,6 +67,64 @@ app_server <- function(
     wear_history_panel(history)
   })
 
+  change_weather <- function(weather_mode) {
+    state_at_click <- app_state()
+    current_weather_mode <- state_at_click$settings$weather_mode[[1]]
+
+    if (identical(current_weather_mode, weather_mode)) {
+      return(invisible(NULL))
+    }
+
+    busy(TRUE)
+    notice(NULL)
+    on.exit(busy(FALSE), add = TRUE)
+
+    result <- tryCatch(
+      change_weather_mode(
+        connection,
+        weather_mode = weather_mode,
+        starting_state_version =
+          state_at_click$settings$state_version[[1]],
+        starting_active_recommendation_id =
+          state_at_click$settings$active_recommendation_id[[1]]
+      ),
+      error = function(error) error
+    )
+
+    if (inherits(result, "error")) {
+      notice(list(
+        type = "error",
+        message = "The weather mode could not be changed; try again."
+      ))
+      return(invisible(NULL))
+    }
+
+    app_state(result$state)
+    recommendation_visible(FALSE)
+    notice(list(
+      type = "info",
+      message = if (result$stale) {
+        "The current state was reloaded."
+      } else {
+        paste(
+          "Weather changed to",
+          paste0(stringr::str_to_sentence(weather_mode), "."),
+          "Choose a new outfit."
+        )
+      }
+    ))
+
+    invisible(NULL)
+  }
+
+  shiny::observeEvent(input$weather_warm, {
+    change_weather("warm")
+  }, ignoreInit = TRUE)
+
+  shiny::observeEvent(input$weather_cold, {
+    change_weather("cold")
+  }, ignoreInit = TRUE)
+
   shiny::observeEvent(input$choose_outfit, {
     state_at_click <- app_state()
     busy(TRUE)
@@ -88,6 +151,7 @@ app_server <- function(
     }
 
     app_state(result$state)
+    recommendation_visible(nrow(result$state$recommendation) == 1L)
     notice(list(
       type = if (result$stale) "info" else "success",
       message = if (result$stale) {
@@ -124,6 +188,7 @@ app_server <- function(
     }
 
     app_state(result$state)
+    recommendation_visible(nrow(result$state$recommendation) == 1L)
     notice(list(
       type = "info",
       message = if (result$stale) {
@@ -160,6 +225,7 @@ app_server <- function(
     }
 
     app_state(result$state)
+    recommendation_visible(nrow(result$state$recommendation) == 1L)
     notice(list(
       type = if (result$stale) "info" else "success",
       message = if (result$stale) {

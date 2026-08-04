@@ -92,13 +92,38 @@ textarea {
   font-size: 0.78rem;
 }
 
-.weather-mode__value {
-  background: var(--current-soft);
+.weather-mode__options {
+  background: var(--paper);
   border: 1px solid var(--current);
   border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+.weather-mode__option.btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--ink);
+  min-height: 40px;
+  padding: 7px 12px;
+}
+
+.weather-mode__option.btn:hover,
+.weather-mode__option.btn:focus-visible {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.weather-mode__option.btn.is-active,
+.weather-mode__option.btn.is-active:hover,
+.weather-mode__option.btn.is-active:focus-visible {
+  background: var(--current-soft);
+  border-color: var(--current);
   color: var(--ink);
   font-weight: 500;
-  padding: 5px 12px;
 }
 
 .app-main {

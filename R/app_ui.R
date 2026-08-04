@@ -20,7 +20,7 @@ app_ui <- function() {
       shiny::tags$header(
         class = "app-header",
         shiny::h1("Clothes App"),
-        shiny::uiOutput("weather_mode")
+        shiny::uiOutput("weather_control")
       ),
       shiny::tags$main(
         class = "app-main",

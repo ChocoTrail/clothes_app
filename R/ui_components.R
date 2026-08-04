@@ -1,10 +1,37 @@
-weather_mode_indicator <- function(weather_mode) {
+weather_mode_control <- function(weather_mode, busy = FALSE) {
+  weather_button <- function(value) {
+    active <- identical(weather_mode, value)
+
+    shiny::tags$button(
+      id = paste0("weather_", value),
+      type = "button",
+      class = paste(
+        c(
+          "btn",
+          "action-button",
+          "weather-mode__option",
+          if (active) "is-active"
+        ),
+        collapse = " "
+      ),
+      `aria-pressed` = if (active) "true" else "false",
+      disabled = if (busy) "disabled" else NULL,
+      shiny::span(
+        class = "action-label",
+        stringr::str_to_sentence(value)
+      )
+    )
+  }
+
   shiny::div(
     class = "weather-mode",
     shiny::span(class = "weather-mode__label", "Weather mode"),
-    shiny::span(
-      class = "weather-mode__value",
-      stringr::str_to_sentence(weather_mode)
+    shiny::div(
+      class = "weather-mode__options",
+      role = "group",
+      `aria-label` = "Weather mode",
+      weather_button("warm"),
+      weather_button("cold")
     )
   )
 }

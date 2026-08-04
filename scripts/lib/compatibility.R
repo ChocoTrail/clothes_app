@@ -1,5 +1,7 @@
 compatibility_reasons <- list(
   black_top_darkblue_bottom = "black_top_with_darkblue_bottom",
+  silver_or_gray_top_khaki_or_gray_bottom =
+    "silver_or_gray_top_with_khaki_or_gray_bottom",
   gray_shoes_khaki_bottom = "gray_shoes_with_khaki_bottom"
 )
 
@@ -34,6 +36,9 @@ generate_outfits <- function(catalog) {
       exclusion_reason = dplyr::case_when(
         top_color == "black" & bottom_color == "darkblue" ~
           compatibility_reasons$black_top_darkblue_bottom,
+        top_color %in% c("silver", "gray") &
+          bottom_color %in% c("khaki", "gray") ~
+          compatibility_reasons$silver_or_gray_top_khaki_or_gray_bottom,
         shoes_color == "gray" & bottom_color == "khaki" ~
           compatibility_reasons$gray_shoes_khaki_bottom,
         TRUE ~ NA_character_

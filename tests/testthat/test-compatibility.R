@@ -48,6 +48,31 @@ test_that("gray shoes are excluded with khaki bottoms", {
   ))
 })
 
+test_that("silver and gray tops are excluded with khaki and gray bottoms", {
+  catalog <- compatibility_catalog_fixture() |>
+    dplyr::bind_rows(
+      tibble::tribble(
+        ~item_id, ~item_name, ~category, ~color, ~season, ~img_url, ~active,
+        "top_silver", "Silver Top", "top", "silver", "all", "https://example.com/top-silver.png", TRUE,
+        "top_gray", "Gray Top", "top", "gray", "all", "https://example.com/top-gray.png", TRUE,
+        "bottom_gray", "Gray Bottom", "bottom", "gray", "all", "https://example.com/bottom-gray.png", TRUE
+      )
+    )
+
+  excluded <- generate_outfits(catalog) |>
+    dplyr::filter(
+      top_item_id %in% c("top_silver", "top_gray"),
+      bottom_item_id %in% c("bottom_khaki", "bottom_gray")
+    )
+
+  expect_equal(nrow(excluded), 8L)
+  expect_true(all(!excluded$is_compatible))
+  expect_true(all(
+    excluded$exclusion_reason ==
+      compatibility_reasons$silver_or_gray_top_khaki_or_gray_bottom
+  ))
+})
+
 test_that("unaffected combinations remain compatible", {
   outfits <- generate_outfits(compatibility_catalog_fixture())
   unaffected <- outfits |>
@@ -59,6 +84,34 @@ test_that("unaffected combinations remain compatible", {
 
   expect_true(unaffected$is_compatible)
   expect_true(is.na(unaffected$exclusion_reason))
+})
+
+test_that("new top and bottom colors do not exclude other pairings", {
+  catalog <- compatibility_catalog_fixture() |>
+    dplyr::bind_rows(
+      tibble::tribble(
+        ~item_id, ~item_name, ~category, ~color, ~season, ~img_url, ~active,
+        "top_silver", "Silver Top", "top", "silver", "all", "https://example.com/top-silver.png", TRUE,
+        "bottom_gray", "Gray Bottom", "bottom", "gray", "all", "https://example.com/bottom-gray.png", TRUE
+      )
+    )
+
+  outfits <- generate_outfits(catalog)
+  silver_with_darkblue <- outfits |>
+    dplyr::filter(
+      top_item_id == "top_silver",
+      bottom_item_id == "bottom_darkblue",
+      shoes_item_id == "shoes_black"
+    )
+  white_with_gray <- outfits |>
+    dplyr::filter(
+      top_item_id == "top_white",
+      bottom_item_id == "bottom_gray",
+      shoes_item_id == "shoes_black"
+    )
+
+  expect_true(silver_with_darkblue$is_compatible)
+  expect_true(white_with_gray$is_compatible)
 })
 
 test_that("outfit IDs are stable across catalog row order", {

@@ -99,7 +99,7 @@ The `data` tab will contain exactly these columns:
 
 An inactive item remains in the catalog and history but cannot be recommended. Items should be made inactive rather than deleted so past recommendations retain valid references.
 
-Colors used by compatibility rules must have consistent stored values, including `black`, `darkblue`, `gray`, and `khaki`. Multicolored items will still receive one manually chosen compatibility color.
+Colors used by compatibility rules must have consistent stored values, including `black`, `darkblue`, `gray`, `khaki`, and `silver`. Multicolored items will still receive one manually chosen compatibility color.
 
 ## Weather Filtering
 
@@ -120,6 +120,7 @@ The publishing process will generate the Cartesian product of all tops, bottoms,
 The initial rules are:
 
 - A black top cannot be worn with a dark-blue bottom, regardless of shoes.
+- A silver or gray top cannot be worn with a khaki or gray bottom, regardless of shoes.
 - Gray shoes cannot be worn with a khaki bottom, regardless of top.
 
 These rules live in the R catalog-publishing logic rather than the Google Sheet or running Shiny app. Future rules will be added there and tested before the catalog is republished.
