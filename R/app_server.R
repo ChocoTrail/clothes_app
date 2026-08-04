@@ -44,6 +44,24 @@ app_server <- function(
     }
   })
 
+  output$history_view <- shiny::renderUI({
+    app_state()
+
+    history <- tryCatch(
+      read_wear_history(connection),
+      error = function(error) error
+    )
+
+    if (inherits(history, "error")) {
+      return(app_notice(
+        "Wear history could not be loaded; try reloading the app.",
+        type = "error"
+      ))
+    }
+
+    wear_history_panel(history)
+  })
+
   shiny::observeEvent(input$choose_outfit, {
     state_at_click <- app_state()
     busy(TRUE)

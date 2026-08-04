@@ -70,6 +70,27 @@ read_recent_worn_top_ids <- function(
   )$top_item_id
 }
 
+read_wear_history <- function(
+  connection,
+  config = clothes_app_config
+) {
+  DBI::dbGetQuery(
+    connection,
+    sprintf(
+      paste(
+        "SELECT recommendation_id, selection_cycle_id, outfit_id,",
+        "catalog_publication_id, weather_mode, effective_cooldown,",
+        "recommended_at, worn_at, top_item_name, top_img_url,",
+        "bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url",
+        "FROM %s",
+        "ORDER BY worn_at DESC, recommendation_id DESC"
+      ),
+      db_table_name(connection, "wear_history", config)
+    )
+  ) |>
+    tibble::as_tibble()
+}
+
 same_active_recommendation <- function(current_id, starting_id) {
   current_missing <- length(current_id) == 0L || is.na(current_id)
   starting_missing <- length(starting_id) == 0L || is.na(starting_id)

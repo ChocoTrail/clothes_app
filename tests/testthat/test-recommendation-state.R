@@ -286,6 +286,57 @@ test_that("confirming marks the active recommendation worn and clears state", {
   )
 })
 
+test_that("wear history returns worn snapshots newest first", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  seed_test_catalog(connection)
+
+  first <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  first_id <- first$state$recommendation$recommendation_id[[1]]
+  confirm_worn_recommendation(
+    connection,
+    starting_state_version = 1L,
+    starting_active_recommendation_id = first_id
+  )
+
+  second <- choose_active_recommendation(
+    connection,
+    starting_state_version = 2L,
+    choose_index = choose_first_index
+  )
+  second_id <- second$state$recommendation$recommendation_id[[1]]
+  confirm_worn_recommendation(
+    connection,
+    starting_state_version = 3L,
+    starting_active_recommendation_id = second_id
+  )
+
+  DBI::dbExecute(
+    connection,
+    paste(
+      "UPDATE clothes_app.recommendations",
+      "SET resolved_at = CASE recommendation_id",
+      "WHEN ? THEN TIMESTAMPTZ '2026-08-01 08:00:00-07:00'",
+      "WHEN ? THEN TIMESTAMPTZ '2026-08-02 08:00:00-07:00'",
+      "END",
+      "WHERE recommendation_id IN (?, ?)"
+    ),
+    params = list(first_id, second_id, first_id, second_id)
+  )
+
+  history <- read_wear_history(connection)
+
+  expect_s3_class(history, "tbl_df")
+  expect_equal(history$recommendation_id, c(second_id, first_id))
+  expect_equal(history$top_item_name, c("Top One", "Top One"))
+  expect_equal(history$bottom_item_name, c("Bottom One", "Bottom One"))
+  expect_equal(history$shoes_item_name, c("Shoes One", "Shoes One"))
+})
+
 test_that("repeated stale confirmation does not change completed state", {
   connection <- new_test_database()
   on.exit(db_disconnect(connection), add = TRUE)

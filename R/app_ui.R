@@ -25,7 +25,23 @@ app_ui <- function() {
       shiny::tags$main(
         class = "app-main",
         shiny::uiOutput("notice"),
-        shiny::uiOutput("decision_view")
+        shiny::div(
+          class = "app-navigation",
+          bslib::navset_underline(
+            id = "app_view",
+            selected = "today",
+            bslib::nav_panel(
+              "Today",
+              value = "today",
+              shiny::uiOutput("decision_view")
+            ),
+            bslib::nav_panel(
+              "History",
+              value = "history",
+              shiny::uiOutput("history_view")
+            )
+          )
+        )
       ),
       shiny::tags$footer(
         class = "app-footer",

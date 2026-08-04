@@ -99,6 +99,103 @@ active_decision_panel <- function(recommendation, busy = FALSE) {
   )
 }
 
+wear_history_item <- function(role, item_name, image_url) {
+  shiny::div(
+    class = "history-item",
+    shiny::div(
+      class = "history-item__image-field",
+      shiny::tags$img(
+        class = "history-item__image",
+        src = image_url,
+        alt = paste(role, item_name, sep = ": "),
+        loading = "lazy"
+      )
+    ),
+    shiny::div(
+      class = "history-item__content",
+      shiny::p(class = "history-item__role", role),
+      shiny::p(class = "history-item__name", item_name)
+    )
+  )
+}
+
+wear_history_accordion_panel <- function(history_row) {
+  worn_at <- history_row$worn_at[[1]]
+  date_label <- paste(
+    format(worn_at, "%B"),
+    paste0(as.integer(format(worn_at, "%d")), ","),
+    format(worn_at, "%Y")
+  )
+
+  bslib::accordion_panel(
+    title = date_label,
+    value = history_row$recommendation_id[[1]],
+    shiny::div(
+      class = "history-row__body",
+      shiny::p(
+        class = "history-row__weather",
+        paste(stringr::str_to_sentence(history_row$weather_mode[[1]]), "weather")
+      ),
+      shiny::div(
+        class = "history-row__items",
+        wear_history_item(
+          "Top",
+          history_row$top_item_name[[1]],
+          history_row$top_img_url[[1]]
+        ),
+        wear_history_item(
+          "Bottom",
+          history_row$bottom_item_name[[1]],
+          history_row$bottom_img_url[[1]]
+        ),
+        wear_history_item(
+          "Shoes",
+          history_row$shoes_item_name[[1]],
+          history_row$shoes_img_url[[1]]
+        )
+      )
+    )
+  )
+}
+
+wear_history_panel <- function(history) {
+  history_content <- if (nrow(history) == 0L) {
+    shiny::p(
+      class = "history-panel__empty",
+      "Outfits you mark as worn will appear here."
+    )
+  } else {
+    panels <- lapply(
+      seq_len(nrow(history)),
+      function(row_number) {
+        wear_history_accordion_panel(history[row_number, ])
+      }
+    )
+
+    do.call(
+      bslib::accordion,
+      c(
+        panels,
+        list(
+          open = FALSE,
+          multiple = TRUE,
+          class = "history-accordion"
+        )
+      )
+    )
+  }
+
+  shiny::tags$section(
+    class = "history-panel",
+    shiny::div(
+      class = "history-panel__heading",
+      shiny::p(class = "eyebrow", "Wear history"),
+      shiny::h2("What you wore")
+    ),
+    shiny::div(class = "history-list", history_content)
+  )
+}
+
 app_notice <- function(message, type = c("info", "success", "error")) {
   type <- match.arg(type)
 
