@@ -13,6 +13,11 @@ app_ui <- function() {
     theme = clothes_app_theme(),
     fillable_mobile = TRUE,
     shiny::tags$head(
+      shiny::tags$link(
+        rel = "icon",
+        type = "image/svg+xml",
+        href = "brand/favicon.svg"
+      ),
       shiny::tags$link(rel = "stylesheet", href = "styles.css")
     ),
     shiny::div(
