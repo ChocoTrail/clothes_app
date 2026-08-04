@@ -52,7 +52,7 @@ Neutrals will carry most of the interface. Color will always be paired with text
 - Pills are limited to genuine filters or statuses, including the warm/cold selector if implemented as a segmented control.
 - Interactive targets should be about 44 by 44 CSS pixels and never smaller than 24 by 24 pixels without a clear reason.
 - Keyboard focus uses Current Turquoise with a separating Paper gap. Body links are Current Turquoise and underlined.
-- The approved Current C1 Whisper mark may appear quietly in the footer at no less than 48 CSS pixels. The approved favicon asset will be used at smaller sizes; the mark will not be redrawn.
+- The approved Ink horizontal lockup may appear quietly in the footer at no less than 180 CSS pixels wide. The approved favicon asset will be used at smaller sizes; the lockup will not be redrawn.
 - The app will use the existing clothing photography directly and will not add decorative stock imagery, cultural motifs, or AI-styled ornament.
 
 ## Technical Plan
@@ -236,7 +236,7 @@ Success, warning, and error treatments will use the brand's operational colors o
 
 Buttons will be disabled while a write is in progress so rapid taps cannot create conflicting records. Focus remains visible, text enlargement and narrow layouts must not clip or cause page-level horizontal scrolling, and any motion will be minimal and respect reduced-motion preferences.
 
-The project name will lead the header. A small footer may pair the Current C1 Whisper mark with the phrase **A Choco Trail project**, without turning the brand lockup into the dominant page element.
+The project name will lead the header without an additional brand signature. A small footer will right-align the approved Ink horizontal Choco Trail lockup without accompanying text, keeping the brand presence quiet and secondary to the app.
 
 ## Dependency and Deployment Model
 
@@ -299,7 +299,7 @@ clothes_app/
 ├── www/
 │   ├── styles.css
 │   └── brand/
-│       ├── choco-trail-mark-current.svg
+│       ├── choco-trail-lockup-horizontal-ink-outlined.svg
 │       └── favicon.svg
 ├── rv/
 │   ├── .gitignore
@@ -327,7 +327,7 @@ clothes_app/
 - `tests/testthat/` will cover catalog validation, compatibility, schema expectations, publication safety, recommendation behavior, and state transitions using local fixtures rather than production data.
 - `docs/data-contract.md` will document Google Sheet and MotherDuck fields; `docs/operations.md` will document setup, publication, deployment, and recovery.
 - `www/styles.css` will implement the Choco Trail typography, color tokens, compact spacing, measured corner radii, responsive behavior, visible focus, and accessibility details not supplied by bslib.
-- `www/brand/choco-trail-mark-current.svg` and `www/brand/favicon.svg` will be copied from the approved assets in the personal-brand repository. They will not be edited or reconstructed.
+- `www/brand/choco-trail-lockup-horizontal-ink-outlined.svg` and `www/brand/favicon.svg` will be copied from the approved assets in the personal-brand repository. They will not be edited or reconstructed.
 
 The existing final PNGs under `img/realistic-white/` may remain as canonical source assets but will not be deployed. Raw images, intermediate image files, generated output, local package libraries, credentials, and `.DS_Store` files will be ignored.
 

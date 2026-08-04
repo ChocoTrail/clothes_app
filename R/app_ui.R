@@ -19,10 +19,7 @@ app_ui <- function() {
       class = "app-shell",
       shiny::tags$header(
         class = "app-header",
-        shiny::div(
-          shiny::p(class = "app-header__signature", "A Choco Trail project"),
-          shiny::h1("Clothes App")
-        ),
+        shiny::h1("Clothes App"),
         shiny::uiOutput("weather_mode")
       ),
       shiny::tags$main(
@@ -32,7 +29,11 @@ app_ui <- function() {
       ),
       shiny::tags$footer(
         class = "app-footer",
-        "Made for quieter morning decisions."
+        shiny::tags$img(
+          class = "app-footer__lockup",
+          src = "brand/choco-trail-lockup-horizontal-ink-outlined.svg",
+          alt = "Choco Trail"
+        )
       )
     )
   )

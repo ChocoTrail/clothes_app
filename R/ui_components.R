@@ -84,6 +84,12 @@ active_decision_panel <- function(recommendation, busy = FALSE) {
     shiny::div(
       class = "decision-panel__actions",
       shiny::actionButton(
+        "confirm_outfit",
+        "I wore this",
+        class = "btn-primary decision-panel__primary-action",
+        disabled = if (busy) "disabled" else NULL
+      ),
+      shiny::actionButton(
         "reroll_outfit",
         "Give me another",
         class = "btn-outline-secondary decision-panel__secondary-action",

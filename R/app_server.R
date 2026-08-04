@@ -115,4 +115,40 @@ app_server <- function(
       }
     ))
   }, ignoreInit = TRUE)
+
+  shiny::observeEvent(input$confirm_outfit, {
+    state_at_click <- app_state()
+    busy(TRUE)
+    notice(NULL)
+    on.exit(busy(FALSE), add = TRUE)
+
+    result <- tryCatch(
+      confirm_worn_recommendation(
+        connection,
+        starting_state_version =
+          state_at_click$settings$state_version[[1]],
+        starting_active_recommendation_id =
+          state_at_click$settings$active_recommendation_id[[1]]
+      ),
+      error = function(error) error
+    )
+
+    if (inherits(result, "error")) {
+      notice(list(
+        type = "error",
+        message = "The outfit could not be marked as worn; try again."
+      ))
+      return()
+    }
+
+    app_state(result$state)
+    notice(list(
+      type = if (result$stale) "info" else "success",
+      message = if (result$stale) {
+        "The current state was reloaded."
+      } else {
+        "Your choice was saved."
+      }
+    ))
+  }, ignoreInit = TRUE)
 }

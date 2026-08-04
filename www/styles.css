@@ -70,7 +70,6 @@ textarea {
   line-height: 1.1;
 }
 
-.app-header__signature,
 .eyebrow,
 .outfit-card__role {
   color: var(--muted);
@@ -232,10 +231,18 @@ textarea {
 }
 
 .app-footer {
+  align-items: center;
   border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.8rem;
-  padding-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+}
+
+.app-footer__lockup {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  width: 200px;
 }
 
 .btn-primary {
