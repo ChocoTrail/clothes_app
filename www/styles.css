@@ -214,6 +214,63 @@ textarea {
   color: var(--ink);
 }
 
+.modal-content {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--border);
+}
+
+.modal-title {
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.wear-date-modal__help {
+  margin: 0 0 16px;
+}
+
+.wear-date-modal .form-group {
+  margin-bottom: 0;
+}
+
+.wear-date-modal .control-label {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.wear-date-modal .form-control {
+  border-color: var(--border);
+  border-radius: 4px;
+  min-height: 44px;
+}
+
+.modal-footer .btn,
+.wear-date-modal__save {
+  border-radius: 4px;
+  min-height: 44px;
+  padding: 9px 16px;
+}
+
+.modal-footer .btn-default {
+  background: transparent;
+  border-color: var(--muted);
+  color: var(--ink);
+}
+
+.modal-footer .btn-default:hover,
+.modal-footer .btn-default:focus-visible {
+  background: var(--surface);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
 .outfit-grid {
   display: grid;
   gap: 12px;

@@ -59,7 +59,7 @@ read_recent_worn_top_ids <- function(
         "FROM %s AS recommendations",
         "JOIN %s AS outfits USING (outfit_id)",
         "WHERE recommendations.status = 'worn'",
-        "ORDER BY recommendations.resolved_at DESC,",
+        "ORDER BY recommendations.worn_on DESC,",
         "recommendations.recommendation_id DESC",
         "LIMIT ?"
       ),
@@ -80,10 +80,10 @@ read_wear_history <- function(
       paste(
         "SELECT recommendation_id, selection_cycle_id, outfit_id,",
         "catalog_publication_id, weather_mode, effective_cooldown,",
-        "recommended_at, worn_at, top_item_name, top_img_url,",
+        "recommended_at, worn_on, top_item_name, top_img_url,",
         "bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url",
         "FROM %s",
-        "ORDER BY worn_at DESC, recommendation_id DESC"
+        "ORDER BY worn_on DESC, recommendation_id DESC"
       ),
       db_table_name(connection, "wear_history", config)
     )
@@ -130,6 +130,32 @@ validate_starting_active_recommendation_id <- function(
   }
 
   as.character(starting_active_recommendation_id)
+}
+
+current_display_date <- function(
+  now = Sys.time(),
+  config = clothes_app_config
+) {
+  as.Date(now, tz = config$display_timezone)
+}
+
+validate_worn_on <- function(
+  worn_on,
+  today = current_display_date()
+) {
+  if (
+    length(worn_on) != 1L
+    || !inherits(worn_on, "Date")
+    || is.na(worn_on)
+  ) {
+    stop("Wear date must be one valid Date.", call. = FALSE)
+  }
+
+  if (worn_on > today) {
+    stop("Wear date cannot be in the future.", call. = FALSE)
+  }
+
+  worn_on
 }
 
 read_cycle_shown_outfit_ids <- function(
@@ -377,7 +403,7 @@ reroll_active_recommendation <- function(
         sprintf(
           paste(
             "UPDATE %s",
-            "SET status = 'rerolled', resolved_at = current_timestamp",
+            "SET status = 'rerolled'",
             "WHERE recommendation_id = ? AND status = 'active'"
           ),
           db_table_name(connection, "recommendations", config)
@@ -407,6 +433,7 @@ confirm_worn_recommendation <- function(
   connection,
   starting_state_version,
   starting_active_recommendation_id,
+  worn_on,
   config = clothes_app_config
 ) {
   starting_state_version <- validate_starting_state_version(
@@ -416,6 +443,10 @@ confirm_worn_recommendation <- function(
     validate_starting_active_recommendation_id(
       starting_active_recommendation_id
     )
+  worn_on <- validate_worn_on(
+    worn_on,
+    today = current_display_date(config = config)
+  )
 
   result <- DBI::dbWithTransaction(connection, {
     state <- read_recommendation_state(connection, config)
@@ -467,12 +498,12 @@ confirm_worn_recommendation <- function(
         sprintf(
           paste(
             "UPDATE %s",
-            "SET status = 'worn', resolved_at = current_timestamp",
+            "SET status = 'worn', worn_on = ?",
             "WHERE recommendation_id = ? AND status = 'active'"
           ),
           db_table_name(connection, "recommendations", config)
         ),
-        params = list(starting_active_recommendation_id)
+        params = list(worn_on, starting_active_recommendation_id)
       )
 
       if (updated_recommendation != 1L) {
@@ -573,8 +604,7 @@ change_weather_mode <- function(
           sprintf(
             paste(
               "UPDATE %s",
-              "SET status = 'season_invalidated',",
-              "resolved_at = current_timestamp",
+              "SET status = 'season_invalidated'",
               "WHERE recommendation_id = ? AND status = 'active'"
             ),
             db_table_name(connection, "recommendations", config)

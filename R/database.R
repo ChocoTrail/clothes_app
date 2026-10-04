@@ -131,11 +131,152 @@ read_schema_sql <- function(schema_path = file.path("db", "schema.sql")) {
   paste(readLines(schema_path, warn = FALSE), collapse = "\n")
 }
 
+database_column_names <- function(
+  connection,
+  table,
+  config = clothes_app_config
+) {
+  DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT column_name",
+      "FROM information_schema.columns",
+      "WHERE table_schema = ? AND table_name = ?",
+      "ORDER BY ordinal_position"
+    ),
+    params = list(config$database_schema, table)
+  )$column_name
+}
+
+migrate_recommendation_worn_date <- function(
+  connection,
+  schema_sql,
+  config = clothes_app_config
+) {
+  columns <- database_column_names(
+    connection,
+    "recommendations",
+    config
+  )
+  has_resolved_at <- "resolved_at" %in% columns
+  has_worn_on <- "worn_on" %in% columns
+
+  if (!has_resolved_at) {
+    return(invisible(FALSE))
+  }
+
+  if (has_worn_on) {
+    stop(
+      "Recommendations cannot contain both resolved_at and worn_on.",
+      call. = FALSE
+    )
+  }
+
+  recommendations <- db_table_name(connection, "recommendations", config)
+  settings <- db_table_name(connection, "app_settings", config)
+  history <- db_table_name(connection, "wear_history", config)
+  legacy_recommendations <- db_table_name(
+    connection,
+    "recommendations_resolved_at_legacy",
+    config
+  )
+  legacy_rows <- DBI::dbGetQuery(
+    connection,
+    sprintf("SELECT * FROM %s", recommendations)
+  )
+  worn_rows <- legacy_rows$status == "worn"
+  worn_on <- rep(as.Date(NA), nrow(legacy_rows))
+
+  if (any(worn_rows)) {
+    worn_on[worn_rows] <- as.Date(
+      legacy_rows$resolved_at[worn_rows],
+      tz = config$display_timezone
+    )
+  }
+
+  legacy_rows$resolved_at <- NULL
+  legacy_rows$worn_on <- worn_on
+  legacy_rows <- legacy_rows[c(
+    "recommendation_id",
+    "selection_cycle_id",
+    "outfit_id",
+    "catalog_publication_id",
+    "weather_mode",
+    "effective_cooldown",
+    "status",
+    "created_at",
+    "worn_on",
+    "top_item_name",
+    "top_img_url",
+    "bottom_item_name",
+    "bottom_img_url",
+    "shoes_item_name",
+    "shoes_img_url"
+  )]
+
+  DBI::dbWithTransaction(connection, {
+    DBI::dbExecute(
+      connection,
+      paste(
+        "CREATE TEMP TABLE app_settings_worn_on_migration AS",
+        sprintf("SELECT * FROM %s", settings)
+      )
+    )
+    DBI::dbExecute(connection, sprintf("DROP VIEW %s", history))
+    DBI::dbExecute(connection, sprintf("DROP TABLE %s", settings))
+    DBI::dbExecute(
+      connection,
+      sprintf(
+        "ALTER TABLE %s RENAME TO recommendations_resolved_at_legacy",
+        recommendations
+      )
+    )
+
+    DBI::dbExecute(connection, schema_sql)
+    DBI::dbAppendTable(
+      connection,
+      DBI::Id(
+        schema = config$database_schema,
+        table = "recommendations"
+      ),
+      legacy_rows
+    )
+    DBI::dbExecute(connection, sprintf("DELETE FROM %s", settings))
+    DBI::dbExecute(
+      connection,
+      sprintf(
+        paste(
+          "INSERT INTO %s",
+          "(settings_id, weather_mode, active_recommendation_id,",
+          "state_version, updated_at)",
+          "SELECT settings_id, weather_mode, active_recommendation_id,",
+          "state_version, updated_at",
+          "FROM app_settings_worn_on_migration"
+        ),
+        settings
+      )
+    )
+    DBI::dbExecute(connection, sprintf("DROP TABLE %s", legacy_recommendations))
+    DBI::dbExecute(
+      connection,
+      "DROP TABLE app_settings_worn_on_migration"
+    )
+  })
+
+  invisible(TRUE)
+}
+
 initialize_database_schema <- function(
   connection,
-  schema_path = file.path("db", "schema.sql")
+  schema_path = file.path("db", "schema.sql"),
+  config = clothes_app_config
 ) {
   schema_sql <- read_schema_sql(schema_path)
+  migrate_recommendation_worn_date(
+    connection,
+    schema_sql,
+    config
+  )
   DBI::dbExecute(connection, schema_sql)
   invisible(connection)
 }
@@ -163,5 +304,15 @@ database_contract_summary <- function(
     )
   )
 
-  list(objects = objects, settings = settings)
+  recommendation_columns <- database_column_names(
+    connection,
+    "recommendations",
+    config
+  )
+
+  list(
+    objects = objects,
+    settings = settings,
+    recommendation_columns = recommendation_columns
+  )
 }

@@ -196,12 +196,12 @@ test_that("catalog publication leaves protected application state untouched", {
     paste(
       "INSERT INTO clothes_app.recommendations",
       "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id,",
-      "weather_mode, effective_cooldown, status, resolved_at,",
+      "weather_mode, effective_cooldown, status, worn_on,",
       "top_item_name, top_img_url, bottom_item_name, bottom_img_url,",
       "shoes_item_name, shoes_img_url)",
       "VALUES",
       "('recommendation-one', 'cycle-one', 'top_one--bottom_one--shoes_one',",
-      "'publication-one', 'warm', 5, 'worn', current_timestamp,",
+      "'publication-one', 'warm', 5, 'worn', DATE '2026-08-03',",
       "'Top One', 'https://example.com/top.png',",
       "'Bottom One', 'https://example.com/bottom.png',",
       "'Shoes One', 'https://example.com/shoes.png')"

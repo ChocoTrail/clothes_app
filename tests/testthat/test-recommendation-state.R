@@ -133,7 +133,7 @@ test_that("reroll resolves the active row and saves an unseen replacement", {
     connection,
     paste(
       "SELECT recommendation_id, selection_cycle_id, outfit_id,",
-      "effective_cooldown, status, resolved_at",
+      "effective_cooldown, status, worn_on",
       "FROM clothes_app.recommendations",
       "ORDER BY created_at, recommendation_id"
     )
@@ -146,8 +146,7 @@ test_that("reroll resolves the active row and saves an unseen replacement", {
   expect_setequal(rows$status, c("active", "rerolled"))
   expect_equal(length(unique(rows$selection_cycle_id)), 1L)
   expect_equal(unique(rows$effective_cooldown), 5L)
-  expect_false(is.na(rows$resolved_at[rows$status == "rerolled"]))
-  expect_true(is.na(rows$resolved_at[rows$status == "active"]))
+  expect_true(all(is.na(rows$worn_on)))
 })
 
 test_that("repeated stale reroll returns its replacement without duplication", {
@@ -249,6 +248,44 @@ test_that("failed reroll leaves the original recommendation active", {
   )
 })
 
+test_that("wear dates must be valid dates that are not in the future", {
+  today <- as.Date("2026-10-04")
+
+  expect_equal(validate_worn_on(today, today), today)
+  expect_equal(validate_worn_on(today - 3L, today), today - 3L)
+  expect_error(validate_worn_on("2026-10-04", today), "valid Date")
+  expect_error(validate_worn_on(as.Date(NA), today), "valid Date")
+  expect_error(validate_worn_on(today + 1L, today), "future")
+})
+
+test_that("an invalid wear date leaves the recommendation active", {
+  connection <- new_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+  seed_test_catalog(connection)
+  active <- choose_active_recommendation(
+    connection,
+    starting_state_version = 0L,
+    choose_index = choose_first_index
+  )
+  active_id <- active$state$recommendation$recommendation_id[[1]]
+  tomorrow <- current_display_date() + 1L
+
+  expect_error(
+    confirm_worn_recommendation(
+      connection,
+      starting_state_version = 1L,
+      starting_active_recommendation_id = active_id,
+      worn_on = tomorrow
+    ),
+    "future"
+  )
+
+  state <- read_recommendation_state(connection)
+  expect_equal(state$settings$active_recommendation_id, active_id)
+  expect_equal(state$settings$state_version, 1)
+  expect_equal(state$recommendation$status, "active")
+})
+
 test_that("confirming marks the active recommendation worn and clears state", {
   connection <- new_test_database()
   on.exit(db_disconnect(connection), add = TRUE)
@@ -263,11 +300,12 @@ test_that("confirming marks the active recommendation worn and clears state", {
   confirmed <- confirm_worn_recommendation(
     connection,
     starting_state_version = 1L,
-    starting_active_recommendation_id = active_id
+    starting_active_recommendation_id = active_id,
+    worn_on = as.Date("2026-08-03")
   )
   confirmed_row <- DBI::dbGetQuery(
     connection,
-    "SELECT status, resolved_at FROM clothes_app.recommendations"
+    "SELECT status, worn_on FROM clothes_app.recommendations"
   )
 
   expect_true(confirmed$completed)
@@ -276,7 +314,7 @@ test_that("confirming marks the active recommendation worn and clears state", {
   expect_equal(confirmed$state$settings$state_version, 2)
   expect_equal(nrow(confirmed$state$recommendation), 0L)
   expect_equal(confirmed_row$status, "worn")
-  expect_false(is.na(confirmed_row$resolved_at))
+  expect_equal(as.character(confirmed_row$worn_on), "2026-08-03")
   expect_equal(
     DBI::dbGetQuery(
       connection,
@@ -300,7 +338,8 @@ test_that("wear history returns worn snapshots newest first", {
   confirm_worn_recommendation(
     connection,
     starting_state_version = 1L,
-    starting_active_recommendation_id = first_id
+    starting_active_recommendation_id = first_id,
+    worn_on = as.Date("2026-08-02")
   )
 
   second <- choose_active_recommendation(
@@ -312,26 +351,18 @@ test_that("wear history returns worn snapshots newest first", {
   confirm_worn_recommendation(
     connection,
     starting_state_version = 3L,
-    starting_active_recommendation_id = second_id
-  )
-
-  DBI::dbExecute(
-    connection,
-    paste(
-      "UPDATE clothes_app.recommendations",
-      "SET resolved_at = CASE recommendation_id",
-      "WHEN ? THEN TIMESTAMPTZ '2026-08-01 08:00:00-07:00'",
-      "WHEN ? THEN TIMESTAMPTZ '2026-08-02 08:00:00-07:00'",
-      "END",
-      "WHERE recommendation_id IN (?, ?)"
-    ),
-    params = list(first_id, second_id, first_id, second_id)
+    starting_active_recommendation_id = second_id,
+    worn_on = as.Date("2026-08-01")
   )
 
   history <- read_wear_history(connection)
 
   expect_s3_class(history, "tbl_df")
-  expect_equal(history$recommendation_id, c(second_id, first_id))
+  expect_equal(history$recommendation_id, c(first_id, second_id))
+  expect_equal(
+    as.character(history$worn_on),
+    c("2026-08-02", "2026-08-01")
+  )
   expect_equal(history$top_item_name, c("Top One", "Top One"))
   expect_equal(history$bottom_item_name, c("Bottom One", "Bottom One"))
   expect_equal(history$shoes_item_name, c("Shoes One", "Shoes One"))
@@ -350,13 +381,15 @@ test_that("repeated stale confirmation does not change completed state", {
   confirm_worn_recommendation(
     connection,
     starting_state_version = 1L,
-    starting_active_recommendation_id = active_id
+    starting_active_recommendation_id = active_id,
+    worn_on = as.Date("2026-08-03")
   )
 
   repeated <- confirm_worn_recommendation(
     connection,
     starting_state_version = 1L,
-    starting_active_recommendation_id = active_id
+    starting_active_recommendation_id = active_id,
+    worn_on = as.Date("2026-08-03")
   )
 
   expect_false(repeated$completed)
@@ -396,7 +429,8 @@ test_that("only a worn top affects the next selection cooldown", {
   confirm_worn_recommendation(
     connection,
     starting_state_version = 1L,
-    starting_active_recommendation_id = first_id
+    starting_active_recommendation_id = first_id,
+    worn_on = as.Date("2026-08-03")
   )
 
   second <- choose_active_recommendation(
@@ -471,7 +505,7 @@ test_that("weather changes invalidate an active recommendation", {
   invalidated <- DBI::dbGetQuery(
     connection,
     paste(
-      "SELECT status, resolved_at FROM clothes_app.recommendations",
+      "SELECT status, worn_on FROM clothes_app.recommendations",
       "WHERE recommendation_id = ?"
     ),
     params = list(active_id)
@@ -483,7 +517,7 @@ test_that("weather changes invalidate an active recommendation", {
   expect_true(is.na(changed$state$settings$active_recommendation_id))
   expect_equal(changed$state$settings$state_version, 2)
   expect_equal(invalidated$status, "season_invalidated")
-  expect_false(is.na(invalidated$resolved_at))
+  expect_true(is.na(invalidated$worn_on))
   expect_length(read_recent_worn_top_ids(connection), 0L)
   expect_equal(
     DBI::dbGetQuery(

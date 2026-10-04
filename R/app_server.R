@@ -200,9 +200,21 @@ app_server <- function(
   }, ignoreInit = TRUE)
 
   shiny::observeEvent(input$confirm_outfit, {
+    if (busy()) {
+      return()
+    }
+
+    shiny::showModal(
+      wear_date_modal(current_display_date())
+    )
+  }, ignoreInit = TRUE)
+
+  shiny::observeEvent(input$save_worn_outfit, {
     state_at_click <- app_state()
+    selected_worn_on <- input$worn_on
     busy(TRUE)
     notice(NULL)
+    shiny::removeModal()
     on.exit(busy(FALSE), add = TRUE)
 
     result <- tryCatch(
@@ -211,16 +223,38 @@ app_server <- function(
         starting_state_version =
           state_at_click$settings$state_version[[1]],
         starting_active_recommendation_id =
-          state_at_click$settings$active_recommendation_id[[1]]
+          state_at_click$settings$active_recommendation_id[[1]],
+        worn_on = selected_worn_on
       ),
       error = function(error) error
     )
 
     if (inherits(result, "error")) {
+      today <- current_display_date()
+      retry_date <- if (
+        inherits(selected_worn_on, "Date")
+        && length(selected_worn_on) == 1L
+        && !is.na(selected_worn_on)
+        && selected_worn_on <= today
+      ) {
+        selected_worn_on
+      } else {
+        today
+      }
+
       notice(list(
         type = "error",
-        message = "The outfit could not be marked as worn; try again."
+        message = paste(
+          "The outfit could not be marked as worn;",
+          "check the date and try again."
+        )
       ))
+      shiny::showModal(wear_date_modal(retry_date))
+      shiny::showNotification(
+        "Check the wear date and try again.",
+        type = "error",
+        duration = 5
+      )
       return()
     }
 

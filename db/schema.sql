@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
   effective_cooldown SMALLINT NOT NULL,
   status VARCHAR NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp,
-  resolved_at TIMESTAMP WITH TIME ZONE,
+  worn_on DATE,
   top_item_name VARCHAR NOT NULL,
   top_img_url VARCHAR NOT NULL,
   bottom_item_name VARCHAR NOT NULL,
@@ -80,11 +80,11 @@ CREATE TABLE IF NOT EXISTS recommendations (
     CHECK (
       status IN ('active', 'rerolled', 'worn', 'season_invalidated')
     ),
-  CONSTRAINT recommendations_resolution_consistent
+  CONSTRAINT recommendations_worn_on_consistent
     CHECK (
-      (status = 'active' AND resolved_at IS NULL)
+      (status = 'worn' AND worn_on IS NOT NULL)
       OR
-      (status <> 'active' AND resolved_at IS NOT NULL)
+      (status <> 'worn' AND worn_on IS NULL)
     ),
   CONSTRAINT recommendations_image_urls_https
     CHECK (
@@ -126,7 +126,7 @@ SELECT
   weather_mode,
   effective_cooldown,
   created_at AS recommended_at,
-  resolved_at AS worn_at,
+  worn_on,
   top_item_name,
   top_img_url,
   bottom_item_name,

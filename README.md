@@ -29,14 +29,16 @@ settings or recommendation history.
   recommendation or reveals the already-active one.
 - Only compatible outfits with three active, weather-eligible items can be
   selected.
-- The algorithm excludes tops from the last five confirmed outfits. If that
-  leaves no candidates, it relaxes the cooldown one step at a time.
+- The algorithm excludes tops from the last five confirmed outfits, ordered by
+  when they were worn. Elapsed days do not advance the cooldown. If that leaves
+  no candidates, it relaxes the cooldown one step at a time.
 - It chooses an eligible top first and then a bottom-shoes combination, so tops
   with more combinations do not receive an unfair advantage.
 - **Give me another** avoids exact combinations already shown in the current
   cycle while unseen choices remain. Rerolled outfits do not affect recency.
-- **I wore this** completes the cycle, clears the active recommendation, and
-  adds the snapshotted names and images to wear history.
+- **I wore this** opens a date selector that defaults to today. Saving today or
+  an earlier date completes the cycle, clears the active recommendation, and
+  adds the snapshotted names and images to wear history on that date.
 - Changing between Warm and Cold clears any active recommendation and keeps the
   new weather mode for later sessions.
 
@@ -172,6 +174,9 @@ git add .
 git commit -m "Describe the change"
 git push
 ```
+
+When a change also alters the MotherDuck schema, follow the maintenance sequence
+in [`docs/operations.md`](docs/operations.md).
 
 ## Add the app to an iPhone Home Screen
 

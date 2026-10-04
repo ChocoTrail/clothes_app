@@ -18,6 +18,9 @@ test_that("schema creates the designed objects and warm singleton", {
   expect_equal(contract$settings$weather_mode, "warm")
   expect_true(is.na(contract$settings$active_recommendation_id))
   expect_equal(contract$settings$state_version, 0)
+
+  expect_true("worn_on" %in% contract$recommendation_columns)
+  expect_false("resolved_at" %in% contract$recommendation_columns)
 })
 
 test_that("application database target defaults locally and validates overrides", {
@@ -98,9 +101,9 @@ test_that("schema constraints reject invalid controlled values", {
       connection,
       paste(
         "INSERT INTO clothes_app.recommendations",
-        "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id, weather_mode, effective_cooldown, status, resolved_at, top_item_name, top_img_url, bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
+        "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id, weather_mode, effective_cooldown, status, worn_on, top_item_name, top_img_url, bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
         "VALUES",
-        "('invalid-active', 'cycle-one', 'top_one--bottom_one--shoes_one', 'publication-one', 'warm', 5, 'active', current_timestamp, 'Top One', 'https://example.com/top.png', 'Bottom One', 'https://example.com/bottom.png', 'Shoes One', 'https://example.com/shoes.png')"
+        "('invalid-active', 'cycle-one', 'top_one--bottom_one--shoes_one', 'publication-one', 'warm', 5, 'active', DATE '2026-08-03', 'Top One', 'https://example.com/top.png', 'Bottom One', 'https://example.com/bottom.png', 'Shoes One', 'https://example.com/shoes.png')"
       )
     ),
     "CHECK constraint"
@@ -113,14 +116,14 @@ test_that("wear history is derived from worn recommendation snapshots", {
   seed_test_catalog(connection)
 
   DBI::dbExecute(
-    connection,
-    paste(
-      "INSERT INTO clothes_app.recommendations",
-      "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id, weather_mode, effective_cooldown, status, created_at, resolved_at, top_item_name, top_img_url, bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
-      "VALUES",
-      "('recommendation-one', 'cycle-one', 'top_one--bottom_one--shoes_one', 'publication-one', 'warm', 5, 'worn', TIMESTAMPTZ '2026-08-03 15:00:00+00', TIMESTAMPTZ '2026-08-03 15:05:00+00', 'Top Snapshot', 'https://example.com/top-snapshot.png', 'Bottom Snapshot', 'https://example.com/bottom-snapshot.png', 'Shoes Snapshot', 'https://example.com/shoes-snapshot.png')"
+      connection,
+      paste(
+        "INSERT INTO clothes_app.recommendations",
+        "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id, weather_mode, effective_cooldown, status, created_at, worn_on, top_item_name, top_img_url, bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
+        "VALUES",
+        "('recommendation-one', 'cycle-one', 'top_one--bottom_one--shoes_one', 'publication-one', 'warm', 5, 'worn', TIMESTAMPTZ '2026-08-03 15:00:00+00', DATE '2026-08-02', 'Top Snapshot', 'https://example.com/top-snapshot.png', 'Bottom Snapshot', 'https://example.com/bottom-snapshot.png', 'Shoes Snapshot', 'https://example.com/shoes-snapshot.png')"
+      )
     )
-  )
 
   history <- DBI::dbGetQuery(
     connection,
@@ -131,6 +134,7 @@ test_that("wear history is derived from worn recommendation snapshots", {
   expect_equal(history$top_item_name, "Top Snapshot")
   expect_equal(history$bottom_item_name, "Bottom Snapshot")
   expect_equal(history$shoes_item_name, "Shoes Snapshot")
+  expect_equal(as.character(history$worn_on), "2026-08-02")
 })
 
 test_that("reinitialization preserves settings and recommendation history", {
@@ -148,14 +152,14 @@ test_that("reinitialization preserves settings and recommendation history", {
   )
 
   DBI::dbExecute(
-    connection,
-    paste(
-      "INSERT INTO clothes_app.recommendations",
-      "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id, weather_mode, effective_cooldown, status, resolved_at, top_item_name, top_img_url, bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
-      "VALUES",
-      "('recommendation-one', 'cycle-one', 'top_one--bottom_one--shoes_one', 'publication-one', 'cold', 5, 'worn', current_timestamp, 'Top One', 'https://example.com/top.png', 'Bottom One', 'https://example.com/bottom.png', 'Shoes One', 'https://example.com/shoes.png')"
+      connection,
+      paste(
+        "INSERT INTO clothes_app.recommendations",
+        "(recommendation_id, selection_cycle_id, outfit_id, catalog_publication_id, weather_mode, effective_cooldown, status, worn_on, top_item_name, top_img_url, bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
+        "VALUES",
+        "('recommendation-one', 'cycle-one', 'top_one--bottom_one--shoes_one', 'publication-one', 'cold', 5, 'worn', DATE '2026-08-03', 'Top One', 'https://example.com/top.png', 'Bottom One', 'https://example.com/bottom.png', 'Shoes One', 'https://example.com/shoes.png')"
+      )
     )
-  )
 
   initialize_database_schema(
     connection,
@@ -171,6 +175,99 @@ test_that("reinitialization preserves settings and recommendation history", {
   expect_equal(contract$settings$weather_mode, "cold")
   expect_equal(contract$settings$state_version, 7)
   expect_equal(recommendation_count$n, 1)
+})
+
+test_that("schema migration preserves history as Pacific wear dates", {
+  connection <- new_legacy_test_database()
+  on.exit(db_disconnect(connection), add = TRUE)
+
+  schema_path <- file.path(project_root, "db", "schema.sql")
+  seed_test_catalog(connection)
+  DBI::dbExecute(
+    connection,
+    paste(
+      "INSERT INTO clothes_app.recommendations",
+      "(recommendation_id, selection_cycle_id, outfit_id,",
+      "catalog_publication_id, weather_mode, effective_cooldown, status,",
+      "created_at, resolved_at, top_item_name, top_img_url,",
+      "bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
+      "VALUES",
+      "('worn-before-migration', 'cycle-one',",
+      "'top_one--bottom_one--shoes_one', 'publication-one', 'warm', 5,",
+      "'worn', TIMESTAMPTZ '2026-08-03 15:00:00+00',",
+      "TIMESTAMPTZ '2026-08-04 06:30:00+00',",
+      "'Top One', 'https://example.com/top.png',",
+      "'Bottom One', 'https://example.com/bottom.png',",
+      "'Shoes One', 'https://example.com/shoes.png')"
+    )
+  )
+  DBI::dbExecute(
+    connection,
+    paste(
+      "INSERT INTO clothes_app.recommendations",
+      "(recommendation_id, selection_cycle_id, outfit_id,",
+      "catalog_publication_id, weather_mode, effective_cooldown, status,",
+      "created_at, resolved_at, top_item_name, top_img_url,",
+      "bottom_item_name, bottom_img_url, shoes_item_name, shoes_img_url)",
+      "VALUES",
+      "('active-before-migration', 'cycle-two',",
+      "'top_one--bottom_one--shoes_one', 'publication-one', 'cold', 5,",
+      "'active', TIMESTAMPTZ '2026-08-04 15:00:00+00', NULL,",
+      "'Top One', 'https://example.com/top.png',",
+      "'Bottom One', 'https://example.com/bottom.png',",
+      "'Shoes One', 'https://example.com/shoes.png')"
+    )
+  )
+  DBI::dbExecute(
+    connection,
+    paste(
+      "UPDATE clothes_app.app_settings",
+      "SET weather_mode = 'cold',",
+      "active_recommendation_id = 'active-before-migration',",
+      "state_version = 4"
+    )
+  )
+
+  initialize_database_schema(connection, schema_path)
+  initialize_database_schema(connection, schema_path)
+
+  columns <- database_column_names(connection, "recommendations")
+  migrated <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT status, worn_on",
+      "FROM clothes_app.recommendations",
+      "WHERE recommendation_id = 'worn-before-migration'"
+    )
+  )
+  settings <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT weather_mode, active_recommendation_id, state_version",
+      "FROM clothes_app.app_settings"
+    )
+  )
+  active <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT status, worn_on",
+      "FROM clothes_app.recommendations",
+      "WHERE recommendation_id = 'active-before-migration'"
+    )
+  )
+
+  expect_true("worn_on" %in% columns)
+  expect_false("resolved_at" %in% columns)
+  expect_equal(migrated$status, "worn")
+  expect_equal(as.character(migrated$worn_on), "2026-08-03")
+  expect_equal(settings$weather_mode, "cold")
+  expect_equal(
+    settings$active_recommendation_id,
+    "active-before-migration"
+  )
+  expect_equal(settings$state_version, 4)
+  expect_equal(active$status, "active")
+  expect_true(is.na(active$worn_on))
 })
 
 test_that("settings persist across a clean disconnect and reconnect", {

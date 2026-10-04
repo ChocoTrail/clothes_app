@@ -1239,7 +1239,7 @@
       "checksum": "1e7482cb922a8c62b95e17307f8b7670"
     },
     "R/app_server.R": {
-      "checksum": "6856ee839030d7ff645e5a875044d3f6"
+      "checksum": "d6f1c36a4d5d9955706757d418e87721"
     },
     "R/app_ui.R": {
       "checksum": "1bd6b1e963b3e68fbd91f7bbefd03813"
@@ -1251,16 +1251,16 @@
       "checksum": "c9e33b09a8bd6e77104585cf2d10fefd"
     },
     "R/database.R": {
-      "checksum": "aa898ef249a0c4ed258b339a4900f79b"
+      "checksum": "9e605655a6bde84bef94fabbffd9a126"
     },
     "R/recommendation_state.R": {
-      "checksum": "10f51f6edc054c46239f68591b945a37"
+      "checksum": "b610f9936ae7e5f51fca668cd64a90d4"
     },
     "R/recommendation.R": {
       "checksum": "9caa3d27e79b98bc9f3bd4469ce8f22f"
     },
     "R/ui_components.R": {
-      "checksum": "a65f97de14bd29c7dbf1fa0180d65154"
+      "checksum": "b9cfd91d545ed756fa8961c105f71e0b"
     },
     "www/brand/apple-touch-icon.png": {
       "checksum": "d5a86b4058ad3db16894f339e9d9e7f6"
@@ -1272,7 +1272,7 @@
       "checksum": "f0e8698dc7488520fe66eede0d7a5251"
     },
     "www/styles.css": {
-      "checksum": "d8dab21d903616d87817814ebf9824d1"
+      "checksum": "f94c6f933f04bcea4f23bb94a2038e5d"
     }
   },
   "users": null

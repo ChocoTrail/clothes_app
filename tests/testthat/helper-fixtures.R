@@ -24,6 +24,54 @@ new_test_database <- function() {
   connection
 }
 
+legacy_schema_sql <- function(
+  schema_path = file.path(project_root, "db", "schema.sql")
+) {
+  current_schema <- read_schema_sql(schema_path)
+  current_constraint <- paste(
+    "  CONSTRAINT recommendations_worn_on_consistent",
+    "    CHECK (",
+    "      (status = 'worn' AND worn_on IS NOT NULL)",
+    "      OR",
+    "      (status <> 'worn' AND worn_on IS NULL)",
+    "    ),",
+    sep = "\n"
+  )
+  legacy_constraint <- paste(
+    "  CONSTRAINT recommendations_resolution_consistent",
+    "    CHECK (",
+    "      (status = 'active' AND resolved_at IS NULL)",
+    "      OR",
+    "      (status <> 'active' AND resolved_at IS NOT NULL)",
+    "    ),",
+    sep = "\n"
+  )
+  legacy_schema <- sub(
+    "  worn_on DATE,",
+    "  resolved_at TIMESTAMP WITH TIME ZONE,",
+    current_schema,
+    fixed = TRUE
+  )
+  legacy_schema <- sub(
+    current_constraint,
+    legacy_constraint,
+    legacy_schema,
+    fixed = TRUE
+  )
+  sub(
+    "  worn_on,",
+    "  resolved_at AS worn_at,",
+    legacy_schema,
+    fixed = TRUE
+  )
+}
+
+new_legacy_test_database <- function() {
+  connection <- db_connect_local()
+  DBI::dbExecute(connection, legacy_schema_sql())
+  connection
+}
+
 choose_first_index <- function(n, size) {
   1L
 }

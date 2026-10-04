@@ -28,9 +28,15 @@ Stores the deterministic `outfit_id`, top/bottom/shoes item IDs, compatibility f
 
 ### `recommendations`
 
-Stores each displayed recommendation, including its cycle, outfit, publication, weather mode, effective cooldown, lifecycle status, timestamps, and the displayed item-name and image-URL snapshots.
+Stores each displayed recommendation, including its cycle, outfit, publication,
+weather mode, effective cooldown, lifecycle status, creation timestamp,
+nullable `worn_on` date, and the displayed item-name and image-URL snapshots.
 
-Allowed statuses are `active`, `rerolled`, `worn`, and `season_invalidated`. Active rows have no resolution timestamp; every resolved status does.
+Allowed statuses are `active`, `rerolled`, `worn`, and `season_invalidated`.
+`worn_on` is required when status is `worn` and is absent for every other
+status. It records the user-selected date the outfit was worn. The app does not
+store a separate timestamp for when that confirmation was entered. The selected
+date cannot be in the future when it is saved.
 
 ### `app_settings`
 
@@ -38,4 +44,10 @@ Contains exactly one row with `settings_id = 'singleton'`. It stores the persist
 
 ### `wear_history`
 
-A read-only view of recommendations whose status is `worn`. It exposes the snapshotted names and image URLs and uses `resolved_at` as `worn_at`.
+A read-only view of recommendations whose status is `worn`. It exposes
+`worn_on` plus the snapshotted names and image URLs. Results are ordered by the
+actual wear date, with recommendation ID as the deterministic tie-breaker.
+
+During the schema update, existing worn recommendations derive `worn_on` from
+their former `resolved_at` values in Pacific time. The old resolution timestamp
+is then removed rather than retained as a saved-at field.

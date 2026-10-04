@@ -94,6 +94,25 @@ For an ordinary code change:
 4. Commit and push to `main`.
 5. Watch the Connect Cloud build logs until the new commit is active.
 
+For a code change that also migrates the database schema:
+
+1. Stop using the app until the sequence is complete.
+2. Run the full tests and regenerate `manifest.json`.
+3. Commit and push the release to `main`.
+4. Wait until that exact commit is active on Connect Cloud. The app may be
+   temporarily unavailable because its code expects the new schema.
+5. Run `Rscript scripts/initialize_database.R` locally with
+   `MOTHERDUCK_TOKEN` set. The migration runs transactionally and preserves
+   settings, active recommendations, and history.
+6. Confirm the initializer lists `worn_on` among the recommendation columns and
+   does not list `resolved_at`.
+7. Recheck the deployed app, including opening and canceling the wear-date
+   dialog. Record a production wear event only when it reflects a real outfit.
+
+The migration removes `resolved_at`, so the earlier app release is not a safe
+rollback target after step 5. Finish local testing before beginning this short
+maintenance sequence.
+
 The deployment should then be checked in its standalone public view. Confirm
 the ready-state card, weather persistence, recommendation persistence after a
 refresh, rerolling, worn confirmation, history accordions, images, and the
@@ -105,7 +124,9 @@ performing routine visual-only checks.
 
 1. Set `MOTHERDUCK_TOKEN` in the local environment. Never add the value to a tracked file.
 2. Run `Rscript scripts/initialize_database.R` from the project root.
-3. Confirm the output lists `clothing_items`, `outfits`, `recommendations`, `app_settings`, and `wear_history`, with the singleton setting in warm mode.
+3. Confirm the output lists `clothing_items`, `outfits`, `recommendations`,
+   `app_settings`, and `wear_history`, with the expected singleton setting and
+   recommendation columns.
 
 The R connection performs the required sequence explicitly:
 
@@ -117,7 +138,10 @@ The R connection performs the required sequence explicitly:
 6. Apply `db/schema.sql` as one transactional batch.
 7. Disconnect even if initialization fails.
 
-The initializer is repeatable. Existing settings and recommendation history are preserved.
+The initializer is repeatable. Existing settings and recommendation history are
+preserved. When upgrading the wear-date release, it converts legacy
+`resolved_at` values to Pacific `worn_on` dates in one transaction and removes
+the old timestamp column.
 
 ## Secret handling
 
@@ -142,6 +166,9 @@ development and `motherduck` only in an environment that has a valid
   Fix the reported issue locally, rerun the tests, and push a new commit. Use
   the Connect Cloud logs and deployed commit SHA to confirm which version is
   active.
+- **The wear-date migration fails:** the transaction rolls back to the legacy
+  schema. Inspect the initializer error without exposing the token, fix it
+  locally, and rerun the initializer before using the deployed app.
 - **Local data appears wrong:** first confirm the selected database target.
   Re-running the schema initializer is safe and does not clear history. The
   ignored local DuckDB file should only be removed when an intentional full

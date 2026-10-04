@@ -126,6 +126,37 @@ active_decision_panel <- function(recommendation, busy = FALSE) {
   )
 }
 
+wear_date_modal <- function(default_date) {
+  shiny::modalDialog(
+    title = "When did you wear this?",
+    shiny::div(
+      class = "wear-date-modal",
+      shiny::p(
+        class = "wear-date-modal__help",
+        "Choose today or an earlier date."
+      ),
+      shiny::dateInput(
+        "worn_on",
+        "Date worn",
+        value = default_date,
+        max = default_date,
+        format = "MM d, yyyy",
+        width = "100%"
+      )
+    ),
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(
+        "save_worn_outfit",
+        "Save wear date",
+        class = "btn-primary wear-date-modal__save"
+      )
+    ),
+    size = "s",
+    easyClose = TRUE
+  )
+}
+
 wear_history_item <- function(role, item_name, image_url) {
   shiny::div(
     class = "history-item",
@@ -147,11 +178,11 @@ wear_history_item <- function(role, item_name, image_url) {
 }
 
 wear_history_accordion_panel <- function(history_row) {
-  worn_at <- history_row$worn_at[[1]]
+  worn_on <- history_row$worn_on[[1]]
   date_label <- paste(
-    format(worn_at, "%B"),
-    paste0(as.integer(format(worn_at, "%d")), ","),
-    format(worn_at, "%Y")
+    format(worn_on, "%B"),
+    paste0(as.integer(format(worn_on, "%d")), ","),
+    format(worn_on, "%Y")
   )
 
   bslib::accordion_panel(

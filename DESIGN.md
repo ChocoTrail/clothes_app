@@ -149,10 +149,16 @@ These rules live in the R catalog-publishing logic rather than the Google Sheet 
 2. The app generates and saves one recommendation before displaying it.
 3. Refreshing or reopening the app returns the same active recommendation.
 4. **Give me another** marks the current recommendation as rerolled and saves a replacement in the same selection cycle.
-5. **I wore this** marks the current recommendation as worn and completes the cycle.
-6. The next recommendation is generated only when the user requests it.
+5. **I wore this** opens a date-selection dialog rather than writing immediately.
+6. The dialog defaults to the current Pacific date and allows today or an
+   earlier date, but not a future date.
+7. Saving the dialog marks the current recommendation as worn on the selected
+   date and completes the cycle. Canceling leaves the recommendation active.
+8. The next recommendation is generated only when the user requests it.
 
-A day off requires no action. Recommendations advance through confirmed wear events, not calendar dates. Timestamps will be displayed in Pacific time, but elapsed calendar time will not affect the cooldown.
+A day off requires no action. Recommendations advance through confirmed wear
+events, not elapsed calendar time. Wear dates and the dialog's default date use
+Pacific time.
 
 ```mermaid
 stateDiagram-v2
@@ -171,7 +177,8 @@ stateDiagram-v2
 The algorithm will remain simple and explainable:
 
 1. Begin with compatible outfits whose three items are active and eligible for the selected weather mode.
-2. Exclude tops found in the last five confirmed worn outfits.
+2. Exclude tops found in the last five confirmed worn outfits, ordered by the
+   dates they were actually worn rather than the dates they were entered.
 3. If no candidate remains, reduce the cooldown to four, then three, two, one, and zero until candidates exist.
 4. Randomly select one eligible top, giving each eligible top an equal chance.
 5. Randomly select one eligible bottom-and-shoes combination for that top.
@@ -197,7 +204,14 @@ One automatically generated row per top-bottom-shoes combination, containing a s
 
 ### `recommendations`
 
-One row per displayed recommendation, containing a recommendation ID, selection-cycle ID, outfit ID, catalog-publication ID, weather mode, effective cooldown, status, creation timestamp, and resolution timestamp. It will also snapshot the three item names and image URLs that were displayed so later catalog edits do not rewrite confirmed history. Status values distinguish `active`, `rerolled`, `worn`, and `season_invalidated` records.
+One row per displayed recommendation, containing a recommendation ID,
+selection-cycle ID, outfit ID, catalog-publication ID, weather mode, effective
+cooldown, status, creation timestamp, and nullable `worn_on` date. `worn_on` is
+present only when the status is `worn`; the app does not separately store when
+that confirmation was entered. The row will also snapshot the three item names
+and image URLs that were displayed so later catalog edits do not rewrite
+confirmed history. Status values distinguish `active`, `rerolled`, `worn`, and
+`season_invalidated` records.
 
 Only `worn` rows affect top recency.
 
@@ -207,7 +221,10 @@ A singleton row containing a stable settings ID, current weather mode, nullable 
 
 ### `wear_history`
 
-A database view derived from worn recommendation records. It uses the display names and image URLs snapshotted on each recommendation, avoiding a second writable history table while preserving what was shown at the time.
+A database view derived from worn recommendation records. It uses `worn_on` as
+the displayed and sorting date and uses the display names and image URLs
+snapshotted on each recommendation, avoiding a second writable history table
+while preserving what was shown at the time.
 
 ## Access and State Correctness
 
@@ -217,7 +234,12 @@ The public URL is an accepted version-one tradeoff; the app will not implement u
 
 The recommendation is committed before it is displayed. A failed transaction changes no recommendation or setting state. A stale or repeated action reloads the current database state rather than creating another recommendation. Transition identifiers and state versions provide correctness; interface messages may calmly explain that the current state was reloaded without treating an ordinary stale action as data loss.
 
-The first version will use one `db/schema.sql` file and will not maintain a schema-migration ledger. If the database structure later changes after meaningful history has accumulated, a migration process can be introduced then.
+The first version will use one `db/schema.sql` file and will not maintain a
+schema-migration ledger. The first structure change will replace the existing
+general-purpose `resolved_at` timestamp with the nullable `worn_on` date. The
+repeatable schema initializer will preserve existing history by deriving each
+existing worn date from `resolved_at` in Pacific time before removing the old
+column. No saved-at timestamp will remain.
 
 ## Catalog Publication
 
@@ -244,6 +266,9 @@ The bslib-based interface will prioritize phone use while remaining readable on 
 - A warm/cold weather control.
 - A primary decision view with one card each for the top, bottom, and shoes.
 - **Choose my outfit**, **I wore this**, and **Give me another** actions appropriate to the current state.
+- A small date-selection dialog after **I wore this**, defaulting to today and
+  offering save and cancel actions without otherwise changing the decision
+  screen.
 - Clear loading, empty, cooldown-relaxation, and database-error messages.
 - A secondary history view showing confirmed outfits in reverse order.
 - Collapsible date-based history cards that reveal the three saved item images
@@ -256,6 +281,11 @@ Cards will stack vertically on narrow screens and sit side by side on wider scre
 Success, warning, and error treatments will use the brand's operational colors only when those meanings are present. Messages will be direct and calm, such as “Your choice was saved” or “The outfit could not be saved; try again.” Muted color will not be used for essential labels, instructions, or errors.
 
 Buttons will be disabled while a write is in progress so rapid taps cannot create conflicting records. Focus remains visible, text enlargement and narrow layouts must not clip or cause page-level horizontal scrolling, and any motion will be minimal and respect reduced-motion preferences.
+
+The selected wear date is required and cannot be in the future. The server will
+enforce that rule even though the date control also limits future selection.
+Multiple outfits may share the same wear date; ties in history and cooldown
+ordering will be resolved deterministically by recommendation ID.
 
 The project name will lead the header without an additional brand signature. A small footer will right-align the approved Ink horizontal Choco Trail lockup without accompanying text, keeping the brand presence quiet and secondary to the app.
 
